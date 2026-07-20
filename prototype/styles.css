@@ -962,3 +962,23 @@ a { color: var(--blue); text-decoration: none; }
   .weight-bar { grid-template-columns: 1fr 1fr; }
   .ev-grid { grid-template-columns: 1fr; }
 }
+
+/* 携程问道来源标签 */
+.ctrip-src {
+  display: inline-block;
+  font-size: 11px;
+  font-weight: 700;
+  color: #fff;
+  background: linear-gradient(135deg, #2f8fff 0%, #1c6fe0 100%);
+  padding: 2px 8px;
+  border-radius: 999px;
+  margin-bottom: 8px;
+  letter-spacing: .3px;
+}
+.ctrip-src + p, .ctrip-src + div { margin-top: 0; }
+.ctrip-src ~ * { line-height: 1.7; }
+.ctrip-src ~ h1, .ctrip-src ~ h2, .ctrip-src ~ h3 { margin: 10px 0 6px; font-size: 15px; }
+.ctrip-src ~ ul { margin: 6px 0 6px 18px; padding: 0; }
+.ctrip-src ~ li { margin: 2px 0; }
+.ctrip-src ~ table { width: 100%; border-collapse: collapse; margin: 6px 0; font-size: 12px; }
+.ctrip-src ~ th, .ctrip-src ~ td { border: 1px solid var(--line, #e5e7eb); padding: 4px 6px; text-align: left; }

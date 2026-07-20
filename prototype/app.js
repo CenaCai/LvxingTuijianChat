@@ -125,12 +125,12 @@ function sendMessage() {
 
   setTimeout(() => {
     remTyping(tid);
-    aiRespond(detect(text), text);
+    aiRespondReal(text);   // 真实调用携程问道；失败则回退到本地演示回复
     isTyping = false;
     sendBtn.disabled = false;
     setStatus('就绪');
     chatInput.focus();
-  }, 800 + Math.random() * 600);
+  }, 400 + Math.random() * 300);
 }
 
 function esc(s) { const d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
@@ -174,6 +174,26 @@ function aiRespond(scene, text) {
     case 'budget': rBudget(); break;
     case 'memory': rMemory(); break;
     default: rGeneral(); break;
+  }
+}
+
+// ============================================
+// Real backend: 携程问道 (TripAI) proxy
+// ============================================
+async function aiRespondReal(text) {
+  try {
+    const res = await fetch('/api/ctrip', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ query: text }),
+    });
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const data = await res.json();
+    const html = (data && data.html) ? data.html : '<p>' + esc((data && data.text) || '') + '</p>';
+    addMsg('ai', `<div class="ctrip-src">✈️ 携程问道 · 真实回答</div>` + html);
+  } catch (e) {
+    addMsg('ai', `<p>⚠️ 暂时连不上携程问道，已回退到本地演示回复。</p>`);
+    aiRespond(detect(text), text);   // 回退到原 canned 逻辑
   }
 }
 

@@ -1,23 +1,44 @@
-# 智行 TravelMind — AI 差旅助手
+# 智行 TravelMind — AI 差旅助手（LvxingTuijianChat）
 
-基于 LLM 的全流程 AI 差旅 Agent，覆盖"灵感激发 → 规划决策 → 记忆复用 → 突发执行"。采用 CUI 对话 + GUI 卡片混合交互，通过 MCP 协议编排携程/飞猪/天气/航班/知识库等外部工具。
+> **现状说明**：本仓库当前是「前端交互原型 + 携程问道（TripAI）代理」。
+> - **对话**：已接真实后端 —— 用户输入会经 `server.js` 代理调用携程官方「问道」接口（`wendao-skill-prod.ctrip.com/skill/query`），返回真实酒店 / 机票 / 火车票 / 景点 / 玩乐答案。
+> - **方案对比 / 行程监控 / 记忆中心 / PRD**：仍为**前端原型展示**（数据为演示用硬编码，非真实调用）。
+> - 原始技能协议来自 [trips-ai/tripai-skill](https://github.com/trips-ai/tripai-skill)。
 
 ---
 
 ## 快速启动
 
 ```bash
-# 1. 进入原型目录
-cd prototype
+# 1. 安装依赖（仅需一次）
+npm install
 
-# 2. 启动本地服务器（Python 3）
-python3 -m http.server 8765
+# 2. 启动（同时托管前端 + /api/ctrip 代理）
+npm start
+# 或自定义端口：
+PORT=8080 npm start
 
 # 3. 浏览器打开
-open http://127.0.0.1:8765/index.html
+open http://localhost:3000
 ```
 
-> 需要 Python 3。如端口 8765 被占用，换一个端口号即可。
+> 依赖 Node.js 18+（使用内置 fetch）。无需 Python。
+
+### 可选：配置携程问道 API Key
+
+不配置也能用（接口未鉴权时可用，但可能限流）。如需稳定服务，到
+[www.ctrip.com/wendao/openclaw](https://www.ctrip.com/wendao/openclaw) 申请 Key，二选一：
+
+```bash
+# 方式 A：环境变量
+export TRIPAI_API_KEY="your_api_key"
+
+# 方式 B：配置文件（与 tripai-skill 约定一致）
+mkdir -p ~/.config/tripai-skill
+echo "your_api_key" > ~/.config/tripai-skill/api_key
+```
+
+
 
 ### 演示动图
 
@@ -48,14 +69,16 @@ killall python3
 ## 项目结构
 
 ```
-travel_assistant/
+LvxingTuijianChat/
 ├── README.md                          # 说明文档
+├── server.js                          # Express：托管前端 + /api/ctrip 代理到携程问道
+├── package.json                       # 依赖与启动脚本
 ├── assets/
 │   └── demo-phases.gif                # 演示动图
 └── prototype/
     ├── index.html                     # 交互原型（5 个视图）
     ├── styles.css                     # 样式（白色主题）
-    ├── app.js                         # 交互逻辑
+    ├── app.js                         # 交互逻辑（聊天走 /api/ctrip，其余为原型）
     └── system-flow.html               # 系统流程图（7 张 SVG）
 ```
 
