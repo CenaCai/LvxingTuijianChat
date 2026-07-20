@@ -110,55 +110,40 @@
     <section class="view" id="view-compare">
       <div class="page-header">
         <h2>⚖️ 方案对比决策</h2>
-        <p>AI 并行调用多个数据源，多维度分析，权重可调节</p>
+        <p>输入两个目的地，由<strong>携程问道</strong>实时对比分析（真实数据）</p>
+      </div>
+
+      <div class="compare-inputs">
+        <input type="text" id="cmpA" placeholder="目的地 A，如 新疆" value="新疆" />
+        <span class="cmp-vs">VS</span>
+        <input type="text" id="cmpB" placeholder="目的地 B，如 云南" value="云南" />
+        <button class="btn primary" id="cmpBtn">开始对比</button>
+      </div>
+
+      <div class="compare-focus-wrap">
+        <span class="focus-label">你的侧重点（影响对比侧重）：</span>
+        <div class="focus-chips" id="cmpFocus"></div>
       </div>
 
       <div class="compare-grid">
         <div class="compare-col">
-          <div class="compare-hero" style="background: linear-gradient(135deg, #fff5f5 0%, #fff 100%);">
-            <span class="hero-emoji">🏔️</span>
-            <h3>新疆 15 天自驾</h3>
-          </div>
-          <div class="score-list" id="xjScores"></div>
+          <h3 class="cmp-title" id="cmpATitle">目的地 A</h3>
+          <div class="cmp-answer" id="cmpAnswerA"><p class="muted">输入后点击「开始对比」</p></div>
         </div>
-
-        <div class="compare-center">
-          <div class="vs-circle">VS</div>
-          <div class="recommend-box" id="compareRec"></div>
-        </div>
-
         <div class="compare-col">
-          <div class="compare-hero" style="background: linear-gradient(135deg, #f0fdf4 0%, #fff 100%);">
-            <span class="hero-emoji">🌿</span>
-            <h3>云南 15 天游学</h3>
-          </div>
-          <div class="score-list" id="ynScores"></div>
+          <h3 class="cmp-title" id="cmpBTitle">目的地 B</h3>
+          <div class="cmp-answer" id="cmpAnswerB"><p class="muted">输入后点击「开始对比」</p></div>
         </div>
       </div>
 
-      <div class="weight-bar">
-        <div class="weight-item">
-          <label>📚 学习收益 <span id="wLearning">8</span></label>
-          <input type="range" id="sliderLearning" min="1" max="10" value="8" />
-        </div>
-        <div class="weight-item">
-          <label>😌 体力友好 <span id="wFatigue">7</span></label>
-          <input type="range" id="sliderFatigue" min="1" max="10" value="7" />
-        </div>
-        <div class="weight-item">
-          <label>🏞️ 自然体验 <span id="wNature">6</span></label>
-          <input type="range" id="sliderNature" min="1" max="10" value="6" />
-        </div>
-        <button class="btn" id="recalcBtn">🔄 重新计算</button>
-      </div>
+      <div class="compare-summary" id="cmpSummary"></div>
 
       <div class="evidence-box">
-        <h4>📋 AI 决策依据 & 不确定性声明</h4>
+        <h4>📋 数据说明</h4>
         <div class="ev-grid">
-          <div class="ev-item"><span>🌤️</span> 天气：OpenWeatherMap API · 15天预报 · 超过7天准确率60%</div>
-          <div class="ev-item"><span>✈️</span> 机票：携程MCP · 往返经济舱中位数 · 价格实时波动</div>
-          <div class="ev-item"><span>🏨</span> 住宿：Booking MCP · 同档次均价 · 随季节变化</div>
-          <div class="ev-item"><span>📚</span> 课程：知识库RAG · 评分4.6/5 · 更新于3个月前</div>
+          <div class="ev-item"><span>✈️</span> 对比内容由<strong>携程问道</strong>实时生成，覆盖预算 / 美食 / 风光 / 体验 / 适合人群等</div>
+          <div class="ev-item"><span>🔄</span> 每次点击「开始对比」都会重新向携程问道发起真实查询</div>
+          <div class="ev-item"><span>🎯</span> 上方「侧重点」会注入到查询中，引导问道更关注你关心的维度</div>
         </div>
       </div>
     </section>
@@ -169,6 +154,14 @@
         <h2>🛡️ 行程实时守护</h2>
         <p>天气 API 每15分钟轮询 · 航班状态实时跟踪 · 突发状况自动感知</p>
       </div>
+
+      <!-- 实时查询（真实携程问道） -->
+      <div class="live-query">
+        <input type="text" id="monQuery" placeholder="实时查询：如「上海到东京 7月25日 航班」或「大理 天气」或「大理 暴雨 预警」" />
+        <button class="btn primary" id="monQueryBtn">查询</button>
+      </div>
+      <div class="live-result" id="monitorResult"><p class="muted">输入上述问题，由携程问道返回真实航班 / 天气 / 突发信息</p></div>
+      <p class="demo-tag">以下时间线、Plan B 与编排链为<strong>产品演示</strong>示意，非真实监控数据。</p>
 
       <!-- Monitoring cards -->
       <div class="monitor-cards">
@@ -291,10 +284,13 @@
       <div class="mem-grid">
         <div class="mem-panel">
           <h3>📌 长期记忆（跨行程复用）</h3>
-          <div class="mem-row"><span class="mem-emoji">🍽️</span><div><strong>饮食偏好</strong><em>少辣、清淡为主</em></div><button class="mem-act">🔒 锁定</button></div>
-          <div class="mem-row"><span class="mem-emoji">💰</span><div><strong>预算习惯</strong><em>800-1200元/天（含住宿）</em></div><button class="mem-act">🔄 更新</button></div>
-          <div class="mem-row"><span class="mem-emoji">🏃</span><div><strong>出行节奏</strong><em>不接受连续2天高强度交通</em></div><button class="mem-act">🔒 锁定</button></div>
-          <div class="mem-row"><span class="mem-emoji">🏨</span><div><strong>住宿偏好</strong><em>民宿/精品 300-500元/晚</em></div><button class="mem-act">设为过期</button></div>
+          <div class="mem-add">
+            <input type="text" id="memKey" placeholder="标签，如 饮食偏好" />
+            <input type="text" id="memVal" placeholder="值，如 清淡少辣" />
+            <button class="btn" id="memAddBtn">添加</button>
+          </div>
+          <div class="mem-list" id="memLongTerm"></div>
+          <p class="muted mem-hint">记忆保存在本机浏览器（localStorage），刷新不丢失；聊天中识别到的偏好也会自动归入此处。</p>
         </div>
 
         <div class="mem-panel">

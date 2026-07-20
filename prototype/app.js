@@ -18,7 +18,24 @@ const toast = document.getElementById('toast');
 
 // ----- State -----
 let isTyping = false;
-let extractedMemories = [];
+const MEM_KEY = 'travelmind_mem';
+const DEFAULT_MEMORIES = [
+  { label: '饮食偏好', value: '少辣、清淡为主', locked: true },
+  { label: '预算习惯', value: '800-1200元/天（含住宿）', locked: false },
+  { label: '出行节奏', value: '慢节奏、不赶路', locked: true },
+  { label: '住宿偏好', value: '民宿/精品 300-500元/晚', locked: false },
+];
+function loadMemories() {
+  try {
+    const raw = localStorage.getItem(MEM_KEY);
+    if (raw === null) return DEFAULT_MEMORIES.map(m => ({ ...m }));
+    return JSON.parse(raw);
+  } catch { return []; }
+}
+function saveMemories() {
+  try { localStorage.setItem(MEM_KEY, JSON.stringify(extractedMemories)); } catch {}
+}
+let extractedMemories = loadMemories();
 
 // ============================================
 // View switching
@@ -157,6 +174,8 @@ function detect(text) {
   if (t.includes('证据')) return 'evidence';
   if (t.includes('预算') || t.includes('分配')) return 'budget';
   if (t.includes('记忆') || t.includes('偏好')) return 'memory';
+  if (t.includes('路线') || t.includes('交通') || t.includes('行程路线') || t.includes('怎么去')) return 'route';
+  if (t.includes('攻略') || t.includes('小红书') || t.includes('游记')) return 'guide';
   return 'general';
 }
 
@@ -173,6 +192,8 @@ function aiRespond(scene, text) {
     case 'evidence': rEvidence(); break;
     case 'budget': rBudget(); break;
     case 'memory': rMemory(); break;
+    case 'route': aiRespondReal(text); break;
+    case 'guide': aiRespondReal(text); break;
     default: rGeneral(); break;
   }
 }
@@ -181,17 +202,10 @@ function aiRespond(scene, text) {
 // Real backend: 携程问道 (TripAI) proxy
 // ============================================
 async function aiRespondReal(text) {
-  try {
-    const res = await fetch('/api/ctrip', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ query: text }),
-    });
-    if (!res.ok) throw new Error('HTTP ' + res.status);
-    const data = await res.json();
-    const html = (data && data.html) ? data.html : '<p>' + esc((data && data.text) || '') + '</p>';
+  const html = await ctripHtml(text);
+  if (html && html.indexOf('⚠️ 查询失败') === -1) {
     addMsg('ai', `<div class="ctrip-src">✈️ 携程问道 · 真实回答</div>` + html);
-  } catch (e) {
+  } else {
     addMsg('ai', `<p>⚠️ 暂时连不上携程问道，已回退到本地演示回复。</p>`);
     aiRespond(detect(text), text);   // 回退到原 canned 逻辑
   }
@@ -217,7 +231,9 @@ function updateCtxMemory() {
 
 function addMemories(mems) {
   mems.forEach(m => { if (!extractedMemories.find(e => e.label === m.label)) extractedMemories.push(m); });
+  saveMemories();
   updateCtxMemory();
+  renderMemoryPage();
 }
 
 // ============================================
@@ -456,63 +472,75 @@ function rGeneral() {
 }
 
 // ============================================
-// Compare Page Logic
+// Shared: call Ctrip 问道, return safe HTML (or error marker)
 // ============================================
-const dims = [
-  { label: '💰 预算可控', xj: 72, yn: 84 },
-  { label: '📚 学习收益', xj: 58, yn: 91 },
-  { label: '😌 体力友好', xj: 46, yn: 82 },
-  { label: '🏞️ 自然体验', xj: 94, yn: 78 },
-  { label: '🍜 美食丰富', xj: 80, yn: 88 },
-  { label: '🛣️ 交通便利', xj: 40, yn: 76 },
-];
-
-function renderScores() {
-  const lw = parseInt(document.getElementById('sliderLearning')?.value || 8);
-  const fw = parseInt(document.getElementById('sliderFatigue')?.value || 7);
-  const nw = parseInt(document.getElementById('sliderNature')?.value || 6);
-
-  document.getElementById('wLearning').textContent = lw;
-  document.getElementById('wFatigue').textContent = fw;
-  document.getElementById('wNature').textContent = nw;
-
-  const xjEl = document.getElementById('xjScores');
-  const ynEl = document.getElementById('ynScores');
-
-  if (xjEl) xjEl.innerHTML = dims.map(d => `
-    <div class="score-row">
-      <span class="score-label">${d.label}</span>
-      <div class="score-bar"><div class="score-fill ${d.xj>=80?'hi':d.xj>=60?'mid':'lo'}" style="width:${d.xj}%"></div></div>
-      <span class="score-num">${d.xj}</span>
-    </div>`).join('');
-
-  if (ynEl) ynEl.innerHTML = dims.map(d => `
-    <div class="score-row">
-      <span class="score-label">${d.label}</span>
-      <div class="score-bar"><div class="score-fill ${d.yn>=80?'hi':d.yn>=60?'mid':'lo'}" style="width:${d.yn}%"></div></div>
-      <span class="score-num">${d.yn}</span>
-    </div>`).join('');
-
-  // Weighted
-  const xjW = dims.reduce((s,d,i) => s + d.xj * (i===1?lw:i===2?fw:i===3?nw:6), 0);
-  const ynW = dims.reduce((s,d,i) => s + d.yn * (i===1?lw:i===2?fw:i===3?nw:6), 0);
-  const winner = ynW > xjW;
-
-  const rec = document.getElementById('compareRec');
-  if (rec) rec.innerHTML = `
-    <div class="rec-label">🤖 AI 推荐</div>
-    <div class="rec-name">${winner?'🌿 云南15天游学':'🏔️ 新疆15天自驾'}</div>
-    <div class="rec-why">${winner?'学习收益+体力友好权重下，云南更优。新疆自然体验仍是亮点。':'自然体验权重突出时，新疆优势明显。需注意驾驶疲劳。'}</div>
-  `;
+async function ctripHtml(query) {
+  try {
+    const res = await fetch('/api/ctrip', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ query }),
+    });
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const data = await res.json();
+    return (data && data.html) ? data.html : '<p>' + esc((data && data.text) || '') + '</p>';
+  } catch (e) {
+    return '<p>⚠️ 查询失败，请重试。</p>';
+  }
 }
 
-document.getElementById('sliderLearning')?.addEventListener('input', renderScores);
-document.getElementById('sliderFatigue')?.addEventListener('input', renderScores);
-document.getElementById('sliderNature')?.addEventListener('input', renderScores);
-document.getElementById('recalcBtn')?.addEventListener('click', () => {
-  setStatus('重新计算中...', true);
-  setTimeout(() => { renderScores(); setStatus('已刷新'); showToast('✅ 对比报告已刷新'); }, 500);
-});
+// ============================================
+// Compare Page Logic (real Ctrip 问道)
+// ============================================
+const CMP_FOCUS = ['预算', '美食', '自然风光', '体验', '亲子', '人文'];
+let cmpSelectedFocus = new Set(['预算', '体验']);
+
+function initCompare() {
+  const wrap = document.getElementById('cmpFocus');
+  if (wrap) {
+    wrap.innerHTML = CMP_FOCUS.map(f =>
+      `<button class="focus-chip ${cmpSelectedFocus.has(f) ? 'on' : ''}" data-f="${f}">${f}</button>`).join('');
+    wrap.querySelectorAll('.focus-chip').forEach(b => b.addEventListener('click', () => {
+      const f = b.dataset.f;
+      if (cmpSelectedFocus.has(f)) cmpSelectedFocus.delete(f); else cmpSelectedFocus.add(f);
+      b.classList.toggle('on');
+    }));
+  }
+  document.getElementById('cmpBtn')?.addEventListener('click', runCompare);
+}
+
+async function runCompare() {
+  const a = (document.getElementById('cmpA')?.value || '').trim();
+  const b = (document.getElementById('cmpB')?.value || '').trim();
+  const aEl = document.getElementById('cmpAnswerA');
+  const bEl = document.getElementById('cmpAnswerB');
+  const sumEl = document.getElementById('cmpSummary');
+  if (!a || !b) { showToast('⚠️ 请填写两个目的地'); return; }
+  if (document.getElementById('cmpATitle')) document.getElementById('cmpATitle').textContent = a;
+  if (document.getElementById('cmpBTitle')) document.getElementById('cmpBTitle').textContent = b;
+
+  const focusTxt = [...cmpSelectedFocus].length ? '，侧重' + [...cmpSelectedFocus].join('、') : '';
+  const qBase = `对比旅行目的地：${a} 和 ${b}。请从预算、美食、自然风光、体验、适合人群、大致费用区间等角度分析各自优劣${focusTxt}。`;
+  if (aEl) aEl.innerHTML = '<p class="loading">⏳ 正在向携程问道查询「' + esc(a) + '」…</p>';
+  if (bEl) bEl.innerHTML = '<p class="loading">⏳ 正在向携程问道查询「' + esc(b) + '」…</p>';
+  if (sumEl) sumEl.innerHTML = '';
+  setStatus('对比查询中...', true);
+
+  const [htmlA, htmlB] = await Promise.all([
+    ctripHtml(qBase + ` 先专门展开讲${a}。`),
+    ctripHtml(qBase + ` 先专门展开讲${b}。`),
+  ]);
+  if (aEl) aEl.innerHTML = `<div class="ctrip-src">✈️ 携程问道 · 真实回答</div>` + (htmlA || '<p>无结果</p>');
+  if (bEl) bEl.innerHTML = `<div class="ctrip-src">✈️ 携程问道 · 真实回答</div>` + (htmlB || '<p>无结果</p>');
+
+  if (sumEl) {
+    sumEl.innerHTML = '<p class="loading">⏳ 正在生成综合建议…</p>';
+    const sum = await ctripHtml(`基于前面的对比，综合来看更推荐 ${a} 还是 ${b}？给出一句话结论和简要理由。`);
+    sumEl.innerHTML = `<div class="rec-label">🤖 携程问道 · 综合建议</div>` + (sum || '<p>无结果</p>');
+  }
+  setStatus('就绪');
+  showToast('✅ 对比完成');
+}
 
 // ============================================
 // Monitor Page Logic
@@ -523,6 +551,25 @@ document.querySelectorAll('.plan-card').forEach(card => {
     this.classList.add('selected');
   });
 });
+
+// Live query (real Ctrip 问道)
+function initMonitor() {
+  const input = document.getElementById('monQuery');
+  const btn = document.getElementById('monQueryBtn');
+  const out = document.getElementById('monitorResult');
+  if (!btn || !out) return;
+  const go = async () => {
+    const q = (input.value || '').trim();
+    if (!q) { showToast('⚠️ 请输入查询内容'); return; }
+    out.innerHTML = '<p class="loading">⏳ 正在向携程问道查询「' + esc(q) + '」…</p>';
+    setStatus('查询中...', true);
+    const html = await ctripHtml(q);
+    out.innerHTML = `<div class="ctrip-src">✈️ 携程问道 · 真实回答</div>` + (html || '<p>无结果</p>');
+    setStatus('就绪');
+  };
+  btn.addEventListener('click', go);
+  input.addEventListener('keydown', e => { if (e.key === 'Enter') go(); });
+}
 
 // Execute orchestration
 document.getElementById('execBtn')?.addEventListener('click', async function() {
@@ -654,9 +701,51 @@ document.getElementById('demoBtn')?.addEventListener('click', async function() {
 });
 
 // ============================================
+// Memory page (real persistence)
+// ============================================
+function renderMemoryPage() {
+  const el = document.getElementById('memLongTerm');
+  if (!el) return;
+  if (!extractedMemories.length) {
+    el.innerHTML = '<p class="muted">暂无长期记忆，可在上方添加，或在聊天中描述偏好自动提取。</p>';
+    return;
+  }
+  el.innerHTML = extractedMemories.map((m, i) => `
+    <div class="mem-row">
+      <span class="mem-emoji">${m.locked ? '🔒' : '📌'}</span>
+      <div><strong>${esc(m.label)}</strong><em>${esc(m.value)}</em></div>
+      <button class="mem-act" data-act="lock" data-i="${i}">${m.locked ? '🔓 解锁' : '🔒 锁定'}</button>
+      <button class="mem-act" data-act="del" data-i="${i}">🗑 删除</button>
+    </div>`).join('');
+  el.querySelectorAll('.mem-act').forEach(b => b.addEventListener('click', () => {
+    const i = +b.dataset.i, act = b.dataset.act;
+    if (act === 'del') extractedMemories.splice(i, 1);
+    else if (act === 'lock') extractedMemories[i].locked = !extractedMemories[i].locked;
+    saveMemories();
+    renderMemoryPage();
+  }));
+}
+
+function initMemory() {
+  const addBtn = document.getElementById('memAddBtn');
+  if (addBtn) addBtn.addEventListener('click', () => {
+    const k = document.getElementById('memKey').value.trim();
+    const v = document.getElementById('memVal').value.trim();
+    if (!k || !v) { showToast('⚠️ 请填写标签和值'); return; }
+    addMemories([{ label: k, value: v }]);
+    document.getElementById('memKey').value = '';
+    document.getElementById('memVal').value = '';
+    showToast('✅ 已添加记忆');
+  });
+  renderMemoryPage();
+}
+
+// ============================================
 // Init
 // ============================================
-renderScores();
+initCompare();
+initMonitor();
+initMemory();
 switchView('chat');
 showCtx('default');
 setStatus('就绪');
