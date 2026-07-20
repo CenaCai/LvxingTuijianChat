@@ -1,0 +1,969 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>系统流程图 — 智行 TravelMind</title>
+  <style>
+    :root {
+      --bg: #f7f8fb;
+      --card: #ffffff;
+      --ink: #1e293b;
+      --muted: #64748b;
+      --border: #e8ecf1;
+      --primary: #5b5fe8;
+      --primary-soft: #eef0ff;
+      --success: #10b981;
+      --success-soft: #ecfdf5;
+      --warning: #f59e0b;
+      --warning-soft: #fffbeb;
+      --danger: #ef4444;
+      --danger-soft: #fef2f2;
+      --font: 'Inter', 'Noto Sans SC', -apple-system, BlinkMacSystemFont, 'PingFang SC', sans-serif;
+      --shadow-md: 0 4px 12px rgba(0,0,0,0.06);
+      --shadow-lg: 0 12px 32px rgba(0,0,0,0.08);
+      --radius-lg: 16px;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: var(--font);
+      background: var(--bg);
+      color: var(--ink);
+      line-height: 1.6;
+      -webkit-font-smoothing: antialiased;
+    }
+    .page {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 40px 24px;
+    }
+    .page-header {
+      text-align: center;
+      margin-bottom: 48px;
+    }
+    .page-header h1 {
+      font-size: 32px;
+      font-weight: 900;
+      letter-spacing: -0.5px;
+      background: linear-gradient(135deg, #5b5fe8, #8b5cf6);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    .page-header p {
+      color: var(--muted);
+      margin-top: 8px;
+      font-size: 16px;
+    }
+
+    .diagram-section {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 32px;
+      margin-bottom: 36px;
+      box-shadow: var(--shadow-md);
+    }
+    .diagram-section h2 {
+      font-size: 22px;
+      font-weight: 800;
+      margin-bottom: 6px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .diagram-section .subtitle {
+      color: var(--muted);
+      font-size: 14px;
+      margin-bottom: 28px;
+    }
+
+    /* SVG container */
+    .svg-wrap {
+      width: 100%;
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+    }
+    .svg-wrap svg {
+      display: block;
+      min-width: 900px;
+      width: 100%;
+      height: auto;
+    }
+
+    /* Legend */
+    .legend {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 16px;
+      margin-top: 24px;
+      padding-top: 20px;
+      border-top: 1px solid var(--border);
+    }
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 13px;
+      color: var(--muted);
+    }
+    .legend-dot {
+      width: 14px;
+      height: 14px;
+      border-radius: 4px;
+      flex-shrink: 0;
+    }
+
+    /* Tooltip */
+    .tooltip-trigger { cursor: help; }
+    .tooltip-trigger:hover { opacity: 0.85; }
+
+    /* Annotation arrows (CSS) */
+    @keyframes flowPulse {
+      0%, 100% { opacity: 0.5; }
+      50% { opacity: 1; }
+    }
+    .flow-animated {
+      animation: flowPulse 2s ease-in-out infinite;
+    }
+
+    /* Responsive */
+    @media (max-width: 768px) {
+      .page { padding: 20px 14px; }
+      .diagram-section { padding: 20px; }
+      .page-header h1 { font-size: 26px; }
+      .svg-wrap svg { min-width: 700px; }
+    }
+  </style>
+</head>
+<body>
+<div class="page">
+
+  <!-- ===== Header ===== -->
+  <header class="page-header">
+    <h1>🧳 智行 TravelMind · 系统流程图</h1>
+    <p>AI 差旅助手 — 从用户输入到智能决策的完整数据流</p>
+  </header>
+
+  <!-- ================================================================ -->
+  <!-- Diagram 1: System Architecture -->
+  <!-- ================================================================ -->
+  <section class="diagram-section">
+    <h2>🏗️ 1. 系统整体架构</h2>
+    <p class="subtitle">四层架构：用户界面层 → AI 编排层 → 工具数据层 → 记忆持久层</p>
+
+    <div class="svg-wrap">
+      <svg viewBox="0 0 1100 720" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <linearGradient id="gradUI" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0%" stop-color="#5b5fe8"/><stop offset="100%" stop-color="#8b5cf6"/>
+          </linearGradient>
+          <linearGradient id="gradAI" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0%" stop-color="#06b6d4"/><stop offset="100%" stop-color="#3b82f6"/>
+          </linearGradient>
+          <linearGradient id="gradTool" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0%" stop-color="#10b981"/><stop offset="100%" stop-color="#34d399"/>
+          </linearGradient>
+          <linearGradient id="gradMem" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0%" stop-color="#f59e0b"/><stop offset="100%" stop-color="#fbbf24"/>
+          </linearGradient>
+          <filter id="shadow1"><feDropShadow dx="0" dy="2" stdDeviation="4" flood-opacity="0.08"/></filter>
+          <filter id="shadow2"><feDropShadow dx="0" dy="3" stdDeviation="6" flood-opacity="0.12"/></filter>
+          <marker id="arrowBlue" markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto">
+            <path d="M0,0 L10,4 L0,8 Z" fill="#5b5fe8"/>
+          </marker>
+          <marker id="arrowGreen" markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto">
+            <path d="M0,0 L10,4 L0,8 Z" fill="#10b981"/>
+          </marker>
+          <marker id="arrowGray" markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto">
+            <path d="M0,0 L10,4 L0,8 Z" fill="#94a3b8"/>
+          </marker>
+        </defs>
+
+        <!-- Layer backgrounds -->
+        <rect x="40" y="30" width="1020" height="115" rx="14" fill="url(#gradUI)" opacity="0.08" stroke="#5b5fe8" stroke-width="1.5" stroke-dasharray="6,3"/>
+        <text x="60" y="58" font-size="13" font-weight="700" fill="#5b5fe8">用户界面层 User Interface Layer</text>
+
+        <rect x="40" y="165" width="1020" height="195" rx="14" fill="url(#gradAI)" opacity="0.06" stroke="#06b6d4" stroke-width="1.5" stroke-dasharray="6,3"/>
+        <text x="60" y="193" font-size="13" font-weight="700" fill="#0b7b9e">AI 编排层 AI Orchestration Layer</text>
+
+        <rect x="40" y="380" width="1020" height="125" rx="14" fill="url(#gradTool)" opacity="0.06" stroke="#10b981" stroke-width="1.5" stroke-dasharray="6,3"/>
+        <text x="60" y="408" font-size="13" font-weight="700" fill="#10b981">工具与数据层 Tool &amp; Data Layer</text>
+
+        <rect x="40" y="525" width="1020" height="105" rx="14" fill="url(#gradMem)" opacity="0.06" stroke="#f59e0b" stroke-width="1.5" stroke-dasharray="6,3"/>
+        <text x="60" y="553" font-size="13" font-weight="700" fill="#b45309">记忆持久层 Memory &amp; Persistence Layer</text>
+
+        <!-- ===== UI Layer ===== -->
+        <!-- CUI Chat -->
+        <rect x="120" y="62" width="200" height="62" rx="10" fill="#fff" stroke="#5b5fe8" stroke-width="2" filter="url(#shadow1)"/>
+        <text x="220" y="88" text-anchor="middle" font-size="14" font-weight="700" fill="#5b5fe8">💬 CUI 对话</text>
+        <text x="220" y="108" text-anchor="middle" font-size="11" fill="#64748b">自然语言输入/多轮对话</text>
+
+        <!-- GUI Cards -->
+        <rect x="390" y="62" width="200" height="62" rx="10" fill="#fff" stroke="#5b5fe8" stroke-width="2" filter="url(#shadow1)"/>
+        <text x="490" y="88" text-anchor="middle" font-size="14" font-weight="700" fill="#5b5fe8">📊 GUI 卡片</text>
+        <text x="490" y="108" text-anchor="middle" font-size="11" fill="#64748b">结构化数据/评分/时间线</text>
+
+        <!-- Voice -->
+        <rect x="660" y="62" width="170" height="62" rx="10" fill="#fff" stroke="#c7d2fe" stroke-width="1.5" filter="url(#shadow1)"/>
+        <text x="745" y="88" text-anchor="middle" font-size="14" font-weight="700" fill="#64748b">🎙️ 语音输入 (V2)</text>
+        <text x="745" y="108" text-anchor="middle" font-size="11" fill="#94a3b8">ASR + 实时翻译</text>
+
+        <!-- User context -->
+        <rect x="880" y="62" width="155" height="62" rx="10" fill="var(--primary-soft, #eef0ff)" stroke="#c7d2fe" stroke-width="1.5"/>
+        <text x="957" y="88" text-anchor="middle" font-size="13" font-weight="700" fill="#5b5fe8">👤 用户上下文</text>
+        <text x="957" y="108" text-anchor="middle" font-size="11" fill="#64748b">设备/位置/时区</text>
+
+        <!-- Arrows UI → AI -->
+        <line x1="220" y1="124" x2="220" y2="200" stroke="#5b5fe8" stroke-width="2" marker-end="url(#arrowBlue)"/>
+        <line x1="490" y1="124" x2="490" y2="200" stroke="#5b5fe8" stroke-width="2" marker-end="url(#arrowBlue)"/>
+
+        <!-- ===== AI Orchestration Layer ===== -->
+        <!-- Intent Recognition -->
+        <rect x="80" y="210" width="200" height="70" rx="10" fill="#fff" stroke="#06b6d4" stroke-width="2" filter="url(#shadow1)"/>
+        <text x="180" y="238" text-anchor="middle" font-size="14" font-weight="700" fill="#0b7b9e">🔍 意图识别</text>
+        <text x="180" y="256" text-anchor="middle" font-size="11" fill="#64748b">实体提取 + 意图分类</text>
+        <text x="180" y="272" text-anchor="middle" font-size="10" fill="#94a3b8">置信度 &lt;0.7 → 追问</text>
+
+        <!-- Memory Retrieval -->
+        <rect x="340" y="210" width="200" height="70" rx="10" fill="#fff" stroke="#06b6d4" stroke-width="2" filter="url(#shadow1)"/>
+        <text x="440" y="238" text-anchor="middle" font-size="14" font-weight="700" fill="#0b7b9e">🧠 记忆检索</text>
+        <text x="440" y="256" text-anchor="middle" font-size="11" fill="#64748b">长短期记忆向量匹配</text>
+        <text x="440" y="272" text-anchor="middle" font-size="10" fill="#94a3b8">相似度 &gt;0.8 阈值</text>
+
+        <!-- Tool Orchestration -->
+        <rect x="600" y="210" width="220" height="70" rx="10" fill="#fff" stroke="#06b6d4" stroke-width="2" filter="url(#shadow1)"/>
+        <text x="710" y="238" text-anchor="middle" font-size="14" font-weight="700" fill="#0b7b9e">🔧 工具编排</text>
+        <text x="710" y="256" text-anchor="middle" font-size="11" fill="#64748b">Function Calling / MCP</text>
+        <text x="710" y="272" text-anchor="middle" font-size="10" fill="#94a3b8">并行依赖图调度</text>
+
+        <!-- Result Aggregation -->
+        <rect x="880" y="210" width="155" height="70" rx="10" fill="#fff" stroke="#06b6d4" stroke-width="2" filter="url(#shadow1)"/>
+        <text x="957" y="238" text-anchor="middle" font-size="14" font-weight="700" fill="#0b7b9e">📊 结果聚合</text>
+        <text x="957" y="256" text-anchor="middle" font-size="11" fill="#64748b">约束校验 + 排序</text>
+        <text x="957" y="272" text-anchor="middle" font-size="10" fill="#94a3b8">不确定性标注</text>
+
+        <!-- AI internal arrows -->
+        <line x1="280" y1="245" x2="335" y2="245" stroke="#06b6d4" stroke-width="1.5" marker-end="url(#arrowGray)"/>
+        <line x1="540" y1="245" x2="595" y2="245" stroke="#06b6d4" stroke-width="1.5" marker-end="url(#arrowGray)"/>
+        <line x1="820" y1="245" x2="875" y2="245" stroke="#06b6d4" stroke-width="1.5" marker-end="url(#arrowGray)"/>
+
+        <!-- Guardrail box -->
+        <rect x="140" y="296" width="800" height="48" rx="8" fill="#fef2f2" stroke="#fecaca" stroke-width="1.5"/>
+        <text x="540" y="316" text-anchor="middle" font-size="12" font-weight="700" fill="#991b1b">🛡️ 防幻觉护栏 (Anti-Hallucination Guardrails)</text>
+        <text x="540" y="334" text-anchor="middle" font-size="11" fill="#7f1d1d">强制溯源 · 置信度门槛 · 数值区间保护 · 未知即声明 · 支付人工确认卡点</text>
+
+        <!-- Guardrail connection -->
+        <rect x="450" y="280" width="2" height="16" fill="#ef4444"/>
+
+        <!-- Output arrow -->
+        <line x1="957" y1="280" x2="957" y2="296" stroke="#06b6d4" stroke-width="1.5"/>
+
+        <!-- ===== Tool & Data Layer ===== -->
+        <!-- Weather -->
+        <rect x="80" y="418" width="170" height="60" rx="8" fill="#fff" stroke="#10b981" stroke-width="1.5" filter="url(#shadow1)"/>
+        <text x="165" y="444" text-anchor="middle" font-size="13" font-weight="700" fill="#10b981">🌤️ 天气 API</text>
+        <text x="165" y="462" text-anchor="middle" font-size="10" fill="#94a3b8">OpenWeatherMap</text>
+
+        <!-- Flight -->
+        <rect x="290" y="418" width="170" height="60" rx="8" fill="#fff" stroke="#10b981" stroke-width="1.5" filter="url(#shadow1)"/>
+        <text x="375" y="444" text-anchor="middle" font-size="13" font-weight="700" fill="#10b981">✈️ 航班 API</text>
+        <text x="375" y="462" text-anchor="middle" font-size="10" fill="#94a3b8">携程 / Skyscanner</text>
+
+        <!-- Hotel -->
+        <rect x="500" y="418" width="170" height="60" rx="8" fill="#fff" stroke="#10b981" stroke-width="1.5" filter="url(#shadow1)"/>
+        <text x="585" y="444" text-anchor="middle" font-size="13" font-weight="700" fill="#10b981">🏨 住宿 API</text>
+        <text x="585" y="462" text-anchor="middle" font-size="10" fill="#94a3b8">Booking / 飞猪</text>
+
+        <!-- Knowledge Base -->
+        <rect x="710" y="418" width="170" height="60" rx="8" fill="#fff" stroke="#10b981" stroke-width="1.5" filter="url(#shadow1)"/>
+        <text x="795" y="444" text-anchor="middle" font-size="13" font-weight="700" fill="#10b981">📚 知识库</text>
+        <text x="795" y="462" text-anchor="middle" font-size="10" fill="#94a3b8">课程/攻略/签证RAG</text>
+
+        <!-- Map -->
+        <rect x="920" y="418" width="115" height="60" rx="8" fill="#fff" stroke="#10b981" stroke-width="1.5" filter="url(#shadow1)"/>
+        <text x="977" y="444" text-anchor="middle" font-size="13" font-weight="700" fill="#10b981">🗺️ 地图 API</text>
+        <text x="977" y="462" text-anchor="middle" font-size="10" fill="#94a3b8">高德 / Google</text>
+
+        <!-- Tool call arrows -->
+        <line x1="300" y1="310" x2="165" y2="413" stroke="#10b981" stroke-width="1.2" stroke-dasharray="5,3"/>
+        <line x1="500" y1="310" x2="375" y2="413" stroke="#10b981" stroke-width="1.2" stroke-dasharray="5,3"/>
+        <line x1="650" y1="310" x2="585" y2="413" stroke="#10b981" stroke-width="1.2" stroke-dasharray="5,3"/>
+        <line x1="750" y1="310" x2="795" y2="413" stroke="#10b981" stroke-width="1.2" stroke-dasharray="5,3"/>
+
+        <!-- ===== Memory Layer ===== -->
+        <!-- Long-term Memory -->
+        <rect x="180" y="555" width="340" height="55" rx="10" fill="#fff" stroke="#f59e0b" stroke-width="2" filter="url(#shadow1)"/>
+        <text x="350" y="578" text-anchor="middle" font-size="14" font-weight="700" fill="#b45309">📌 长期记忆 (向量数据库)</text>
+        <text x="350" y="598" text-anchor="middle" font-size="11" fill="#64748b">用户画像 · 饮食偏好 · 出行节奏 · 预算习惯 · 历史行程</text>
+
+        <!-- Session Memory -->
+        <rect x="580" y="555" width="340" height="55" rx="10" fill="#fff" stroke="#f59e0b" stroke-width="2" filter="url(#shadow1)"/>
+        <text x="750" y="578" text-anchor="middle" font-size="14" font-weight="700" fill="#b45309">📋 短期记忆 (会话上下文)</text>
+        <text x="750" y="598" text-anchor="middle" font-size="11" fill="#64748b">当前行程 · 已识别约束 · 对话历史摘要 · 待确认事项</text>
+
+        <!-- Memory arrows -->
+        <line x1="380" y1="280" x2="350" y2="550" stroke="#f59e0b" stroke-width="1.5" stroke-dasharray="5,3" marker-end="url(#arrowGray)"/>
+        <line x1="350" y1="550" x2="440" y2="280" stroke="#f59e0b" stroke-width="1.5" stroke-dasharray="5,3"/>
+
+        <!-- Output arrow (bottom) -->
+        <path d="M957,344 L957,370 Q957,385 942,385 L540,385 L540,410" stroke="#5b5fe8" stroke-width="2" fill="none" marker-end="url(#arrowBlue)"/>
+
+        <!-- Output label -->
+        <text x="960" y="365" font-size="11" font-weight="600" fill="#5b5fe8">结构化输出 → GUI 渲染</text>
+
+        <!-- Governance label -->
+        <rect x="380" y="648" width="340" height="36" rx="8" fill="#fffbeb" stroke="#fde68a"/>
+        <text x="550" y="671" text-anchor="middle" font-size="12" font-weight="600" fill="#92400e">🔐 记忆治理：透明 · 可控 · 隐私保护 · 时效管理</text>
+      </svg>
+    </div>
+
+    <div class="legend">
+      <div class="legend-item"><div class="legend-dot" style="background:#5b5fe8;"></div> 用户交互</div>
+      <div class="legend-item"><div class="legend-dot" style="background:#06b6d4;"></div> AI 推理</div>
+      <div class="legend-item"><div class="legend-dot" style="background:#10b981;"></div> 外部工具</div>
+      <div class="legend-item"><div class="legend-dot" style="background:#f59e0b;"></div> 记忆系统</div>
+      <div class="legend-item"><div class="legend-dot" style="background:#ef4444;"></div> 安全护栏</div>
+    </div>
+  </section>
+
+  <!-- ================================================================ -->
+  <!-- Diagram 2: AI Core Data Flow -->
+  <!-- ================================================================ -->
+  <section class="diagram-section">
+    <h2>⚙️ 2. AI 核心数据处理流水线</h2>
+    <p class="subtitle">对应 PRD 3.1 节 — 从用户输入到结构化输出的 6 个阶段</p>
+
+    <div class="svg-wrap">
+      <svg viewBox="0 0 1100 420" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <linearGradient id="pipe1" x1="0" y1="0" x2="1" y2="0">
+            <stop offset="0%" stop-color="#5b5fe8"/><stop offset="100%" stop-color="#8b5cf6"/>
+          </linearGradient>
+          <filter id="glow"><feGaussianBlur stdDeviation="3" result="blur"/><feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+        </defs>
+
+        <!-- Pipeline background bar -->
+        <rect x="30" y="185" width="1040" height="14" rx="7" fill="#e8ecf1"/>
+
+        <!-- Stage 1: User Input -->
+        <rect x="30" y="60" width="155" height="110" rx="14" fill="#fff" stroke="#5b5fe8" stroke-width="2.5" filter="url(#shadow1)"/>
+        <circle cx="107" cy="90" r="18" fill="url(#pipe1)"/>
+        <text x="107" y="96" text-anchor="middle" font-size="18" fill="#fff">👤</text>
+        <text x="107" y="130" text-anchor="middle" font-size="14" font-weight="800" fill="#1e293b">用户输入</text>
+        <text x="107" y="150" text-anchor="middle" font-size="10" fill="#64748b">自然语言 / 文件 / 语音</text>
+        <text x="107" y="164" text-anchor="middle" font-size="10" fill="#94a3b8">+ 设备上下文</text>
+
+        <!-- Arrow 1→2 -->
+        <line x1="185" y1="115" x2="245" y2="115" stroke="#5b5fe8" stroke-width="2.5" marker-end="url(#arrowBlue)"/>
+        <text x="215" y="108" text-anchor="middle" font-size="9" fill="#64748b">文本</text>
+
+        <!-- Stage 2: Intent -->
+        <rect x="255" y="60" width="155" height="110" rx="14" fill="#fff" stroke="#06b6d4" stroke-width="2.5" filter="url(#shadow1)"/>
+        <circle cx="332" cy="90" r="18" fill="#06b6d4"/>
+        <text x="332" y="96" text-anchor="middle" font-size="18" fill="#fff">🔍</text>
+        <text x="332" y="130" text-anchor="middle" font-size="14" font-weight="800" fill="#1e293b">意图识别</text>
+        <text x="332" y="150" text-anchor="middle" font-size="10" fill="#64748b">实体提取 NER</text>
+        <text x="332" y="164" text-anchor="middle" font-size="10" fill="#94a3b8">置信度校验</text>
+
+        <!-- Arrow 2→3 -->
+        <line x1="410" y1="115" x2="470" y2="115" stroke="#06b6d4" stroke-width="2.5" marker-end="url(#arrowBlue)"/>
+        <text x="440" y="108" text-anchor="middle" font-size="9" fill="#64748b">{intent, entities}</text>
+
+        <!-- Stage 3: Memory -->
+        <rect x="480" y="60" width="155" height="110" rx="14" fill="#fff" stroke="#f59e0b" stroke-width="2.5" filter="url(#shadow1)"/>
+        <circle cx="557" cy="90" r="18" fill="#f59e0b"/>
+        <text x="557" y="96" text-anchor="middle" font-size="18" fill="#fff">🧠</text>
+        <text x="557" y="130" text-anchor="middle" font-size="14" font-weight="800" fill="#1e293b">记忆检索</text>
+        <text x="557" y="150" text-anchor="middle" font-size="10" fill="#64748b">向量相似度匹配</text>
+        <text x="557" y="164" text-anchor="middle" font-size="10" fill="#94a3b8">长短期记忆融合</text>
+
+        <!-- Arrow 3→4 -->
+        <line x1="635" y1="115" x2="695" y2="115" stroke="#f59e0b" stroke-width="2.5" marker-end="url(#arrowBlue)"/>
+        <text x="665" y="108" text-anchor="middle" font-size="9" fill="#64748b">{memories}</text>
+
+        <!-- Stage 4: Tool Call -->
+        <rect x="705" y="60" width="155" height="110" rx="14" fill="#fff" stroke="#10b981" stroke-width="2.5" filter="url(#shadow1)"/>
+        <circle cx="782" cy="90" r="18" fill="#10b981"/>
+        <text x="782" y="96" text-anchor="middle" font-size="18" fill="#fff">🔧</text>
+        <text x="782" y="130" text-anchor="middle" font-size="14" font-weight="800" fill="#1e293b">工具调用</text>
+        <text x="782" y="150" text-anchor="middle" font-size="10" fill="#64748b">并行 Function Call</text>
+        <text x="782" y="164" text-anchor="middle" font-size="10" fill="#94a3b8">天气/航班/住宿/知识库</text>
+
+        <!-- Arrow 4→5 -->
+        <line x1="860" y1="115" x2="920" y2="115" stroke="#10b981" stroke-width="2.5" marker-end="url(#arrowBlue)"/>
+        <text x="890" y="108" text-anchor="middle" font-size="9" fill="#64748b">{tool_results}</text>
+
+        <!-- Stage 5: Aggregate -->
+        <rect x="930" y="60" width="140" height="110" rx="14" fill="#fff" stroke="#6366f1" stroke-width="2.5" filter="url(#shadow1)"/>
+        <circle cx="1000" cy="90" r="18" fill="#6366f1"/>
+        <text x="1000" y="96" text-anchor="middle" font-size="18" fill="#fff">📊</text>
+        <text x="1000" y="130" text-anchor="middle" font-size="14" font-weight="800" fill="#1e293b">聚合 + 校验</text>
+        <text x="1000" y="150" text-anchor="middle" font-size="10" fill="#64748b">约束匹配</text>
+        <text x="1000" y="164" text-anchor="middle" font-size="10" fill="#94a3b8">不确定性标注</text>
+
+        <!-- Flow-down arrow to Output -->
+        <path d="M1000,170 L1000,240" stroke="#5b5fe8" stroke-width="2.5" fill="none" marker-end="url(#arrowBlue)"/>
+
+        <!-- Output Stage -->
+        <rect x="210" y="255" width="680" height="90" rx="16" fill="url(#pipe1)" opacity="0.95" filter="url(#shadow2)"/>
+        <text x="550" y="288" text-anchor="middle" font-size="16" font-weight="800" fill="#fff">💬 结构化输出 + 不确定性声明</text>
+        <text x="550" y="312" text-anchor="middle" font-size="12" fill="rgba(255,255,255,0.85)">生成对话回复 + GUI 卡片渲染 + 证据链展示 + 人工确认卡点</text>
+        <text x="550" y="334" text-anchor="middle" font-size="10" fill="rgba(255,255,255,0.6)">每项数据标注 source &amp; fetched_at | 不可缩小数值区间 | 未知数据显示"暂未获取"</text>
+
+        <!-- Guardrail indicators at each stage -->
+        <rect x="40" y="200" width="1040" height="2" fill="none" stroke="#ef4444" stroke-width="1" stroke-dasharray="4,4" opacity="0.5"/>
+
+        <!-- Bottom annotation -->
+        <rect x="210" y="365" width="680" height="36" rx="8" fill="#fef2f2" stroke="#fecaca"/>
+        <text x="550" y="388" text-anchor="middle" font-size="12" font-weight="600" fill="#991b1b">🛡️ 防幻觉约束贯穿全流程：每个阶段的输出都经过置信度/来源/时效性校验</text>
+      </svg>
+    </div>
+  </section>
+
+  <!-- ================================================================ -->
+  <!-- Diagram 3: Memory Lifecycle -->
+  <!-- ================================================================ -->
+  <section class="diagram-section">
+    <h2>🔄 3. 记忆生命周期管理</h2>
+    <p class="subtitle">从创建到归档 — 用户偏好如何被记住、更新、治理</p>
+
+    <div class="svg-wrap">
+      <svg viewBox="0 0 1100 380" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <marker id="arrowMem" markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto">
+            <path d="M0,0 L10,4 L0,8 Z" fill="#f59e0b"/>
+          </marker>
+          <marker id="arrowRed" markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto">
+            <path d="M0,0 L10,4 L0,8 Z" fill="#ef4444"/>
+          </marker>
+          <marker id="arrowGreen2" markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto">
+            <path d="M0,0 L10,4 L0,8 Z" fill="#10b981"/>
+          </marker>
+        </defs>
+
+        <!-- Central lifecycle loop -->
+        <!-- Create -->
+        <rect x="60" y="130" width="180" height="120" rx="14" fill="#fff" stroke="#5b5fe8" stroke-width="2.5" filter="url(#shadow1)"/>
+        <circle cx="150" cy="160" r="22" fill="url(#pipe1)"/>
+        <text x="150" y="167" text-anchor="middle" font-size="20" fill="#fff">✨</text>
+        <text x="150" y="198" text-anchor="middle" font-size="15" font-weight="800" fill="#1e293b">1. 创建 Create</text>
+        <text x="150" y="218" text-anchor="middle" font-size="11" fill="#64748b">从对话中自动提取</text>
+        <text x="150" y="234" text-anchor="middle" font-size="11" fill="#94a3b8">用户可手动添加/编辑</text>
+
+        <!-- Activate arrow -->
+        <line x1="240" y1="190" x2="310" y2="190" stroke="#f59e0b" stroke-width="2.5" marker-end="url(#arrowMem)"/>
+
+        <!-- Activate -->
+        <rect x="320" y="130" width="180" height="120" rx="14" fill="#fff" stroke="#f59e0b" stroke-width="2.5" filter="url(#shadow1)"/>
+        <circle cx="410" cy="160" r="22" fill="#f59e0b"/>
+        <text x="410" y="167" text-anchor="middle" font-size="20" fill="#fff">⚡</text>
+        <text x="410" y="198" text-anchor="middle" font-size="15" font-weight="800" fill="#1e293b">2. 激活 Activate</text>
+        <text x="410" y="218" text-anchor="middle" font-size="11" fill="#64748b">相关对话时自动检索</text>
+        <text x="410" y="234" text-anchor="middle" font-size="11" fill="#94a3b8">标注"基于你的XX偏好"</text>
+
+        <!-- Update arrow -->
+        <line x1="500" y1="190" x2="570" y2="190" stroke="#f59e0b" stroke-width="2.5" marker-end="url(#arrowMem)"/>
+
+        <!-- Update -->
+        <rect x="580" y="130" width="180" height="120" rx="14" fill="#fff" stroke="#10b981" stroke-width="2.5" filter="url(#shadow1)"/>
+        <circle cx="670" cy="160" r="22" fill="#10b981"/>
+        <text x="670" y="167" text-anchor="middle" font-size="20" fill="#fff">🔄</text>
+        <text x="670" y="198" text-anchor="middle" font-size="15" font-weight="800" fill="#1e293b">3. 更新 Update</text>
+        <text x="670" y="218" text-anchor="middle" font-size="11" fill="#64748b">用户反馈驱动更新</text>
+        <text x="670" y="234" text-anchor="middle" font-size="11" fill="#94a3b8">权重动态调整</text>
+
+        <!-- Expire arrow -->
+        <line x1="760" y1="190" x2="830" y2="190" stroke="#f59e0b" stroke-width="2.5" marker-end="url(#arrowMem)"/>
+
+        <!-- Expire -->
+        <rect x="840" y="130" width="200" height="120" rx="14" fill="#fff" stroke="#ef4444" stroke-width="2" filter="url(#shadow1)"/>
+        <circle cx="940" cy="160" r="22" fill="#ef4444"/>
+        <text x="940" y="167" text-anchor="middle" font-size="20" fill="#fff">⏰</text>
+        <text x="940" y="198" text-anchor="middle" font-size="15" font-weight="800" fill="#1e293b">4. 过期/归档</text>
+        <text x="940" y="218" text-anchor="middle" font-size="11" fill="#64748b">6个月未使用→待确认</text>
+        <text x="940" y="234" text-anchor="middle" font-size="11" fill="#94a3b8">用户可锁定或删除</text>
+
+        <!-- Feedback loop arrow (back to create/update) -->
+        <path d="M1040,200 L1060,200 L1060,280 L150,280 L150,255" stroke="#5b5fe8" stroke-width="2" fill="none" stroke-dasharray="8,4" marker-end="url(#arrowBlue)"/>
+        <text x="1065" y="245" font-size="11" font-weight="600" fill="#5b5fe8">反馈循环</text>
+
+        <!-- Top annotation: Memory types -->
+        <rect x="60" y="30" width="980" height="58" rx="10" fill="#fffbeb" stroke="#fde68a"/>
+        <text x="100" y="54" font-size="13" font-weight="800" fill="#92400e">📌 长期记忆</text>
+        <text x="100" y="74" font-size="11" fill="#78716c">跨行程复用 · 用户画像 · 偏好基线 · 存储在向量数据库 (向量嵌入 + 元数据)</text>
+
+        <rect x="540" y="30" width="500" height="58" rx="10" fill="#eef0ff" stroke="#c7d2fe"/>
+        <text x="580" y="54" font-size="13" font-weight="800" fill="#4a4ed4">📋 短期记忆</text>
+        <text x="580" y="74" font-size="11" fill="#64748b">当前会话 · 上下文窗口 · 临时约束 · 对话结束后降级为摘要存入长期记忆</text>
+
+        <!-- Governance rules at bottom -->
+        <rect x="60" y="310" width="980" height="48" rx="10" fill="#f8fafc" stroke="#e8ecf1"/>
+        <text x="550" y="332" text-anchor="middle" font-size="12" font-weight="700" fill="#64748b">🔐 治理规则</text>
+        <text x="550" y="350" text-anchor="middle" font-size="11" fill="#94a3b8">透明度（标注记忆来源）· 可控性（用户编辑/锁定/删除）· 隐私保护（敏感数据不入长期记忆）· 时效管理（6月过期）</text>
+      </svg>
+    </div>
+  </section>
+
+  <!-- ================================================================ -->
+  <!-- Diagram 4: Scenario Flow (User Journey) -->
+  <!-- ================================================================ -->
+  <section class="diagram-section">
+    <h2>🗺️ 4. 三大场景用户旅程</h2>
+    <p class="subtitle">场景 A（知识库）· 场景 B（对比决策）· 场景 C（突发 Plan B）</p>
+
+    <div class="svg-wrap">
+      <svg viewBox="0 0 1100 560" xmlns="http://www.w3.org/2000/svg">
+        <!-- ===== Row A: Knowledge Base ===== -->
+        <text x="30" y="36" font-size="15" font-weight="900" fill="#5b5fe8">场景 A：长线游学知识库</text>
+
+        <rect x="30" y="50" width="150" height="58" rx="10" fill="#fff" stroke="#5b5fe8" stroke-width="2" filter="url(#shadow1)"/>
+        <text x="105" y="74" text-anchor="middle" font-size="12" font-weight="700" fill="#1e293b">👤 粘贴碎片信息</text>
+        <text x="105" y="94" text-anchor="middle" font-size="10" fill="#64748b">小红书/签证/课程</text>
+
+        <line x1="180" y1="79" x2="220" y2="79" stroke="#5b5fe8" stroke-width="2" marker-end="url(#arrowBlue)"/>
+
+        <rect x="228" y="50" width="150" height="58" rx="10" fill="#fff" stroke="#5b5fe8" stroke-width="2" filter="url(#shadow1)"/>
+        <text x="303" y="74" text-anchor="middle" font-size="12" font-weight="700" fill="#1e293b">🤖 AI 结构化提取</text>
+        <text x="303" y="94" text-anchor="middle" font-size="10" fill="#64748b">实体+约束识别</text>
+
+        <line x1="378" y1="79" x2="418" y2="79" stroke="#5b5fe8" stroke-width="2" marker-end="url(#arrowBlue)"/>
+
+        <rect x="426" y="50" width="150" height="58" rx="10" fill="#fff" stroke="#f59e0b" stroke-width="2" filter="url(#shadow1)"/>
+        <text x="501" y="74" text-anchor="middle" font-size="12" font-weight="700" fill="#1e293b">🧠 存入长期记忆</text>
+        <text x="501" y="94" text-anchor="middle" font-size="10" fill="#64748b">向量化 + 元数据</text>
+
+        <line x1="576" y1="79" x2="616" y2="79" stroke="#f59e0b" stroke-width="2" marker-end="url(#arrowMem)"/>
+
+        <rect x="624" y="50" width="160" height="58" rx="10" fill="#fff" stroke="#10b981" stroke-width="2" filter="url(#shadow1)"/>
+        <text x="704" y="74" text-anchor="middle" font-size="12" font-weight="700" fill="#1e293b">📅 Day 45 自动激活</text>
+        <text x="704" y="94" text-anchor="middle" font-size="10" fill="#64748b">提醒Day1偏好</text>
+
+        <line x1="784" y1="79" x2="824" y2="79" stroke="#10b981" stroke-width="2" marker-end="url(#arrowGreen2)"/>
+
+        <rect x="832" y="50" width="200" height="58" rx="10" fill="var(--primary-soft, #eef0ff)" stroke="#5b5fe8" stroke-width="2" filter="url(#shadow1)"/>
+        <text x="932" y="74" text-anchor="middle" font-size="12" font-weight="700" fill="#5b5fe8">✅ 主动推荐符合偏好</text>
+        <text x="932" y="94" text-anchor="middle" font-size="10" fill="#64748b">"根据你的清淡口味..."</text>
+
+        <!-- ===== Row B: Comparison ===== -->
+        <text x="30" y="180" font-size="15" font-weight="900" fill="#06b6d4">场景 B：复杂行程对比决策</text>
+
+        <rect x="30" y="195" width="150" height="58" rx="10" fill="#fff" stroke="#06b6d4" stroke-width="2" filter="url(#shadow1)"/>
+        <text x="105" y="219" text-anchor="middle" font-size="12" font-weight="700" fill="#1e293b">👤 模糊偏好表达</text>
+        <text x="105" y="239" text-anchor="middle" font-size="10" fill="#64748b">"A和B哪个好？"</text>
+
+        <line x1="180" y1="224" x2="220" y2="224" stroke="#06b6d4" stroke-width="2" marker-end="url(#arrowBlue)"/>
+
+        <rect x="228" y="195" width="180" height="58" rx="10" fill="#fff" stroke="#06b6d4" stroke-width="2" filter="url(#shadow1)"/>
+        <text x="318" y="219" text-anchor="middle" font-size="12" font-weight="700" fill="#1e293b">🤖 并行调用 4 个 API</text>
+        <text x="318" y="239" text-anchor="middle" font-size="10" fill="#64748b">天气·航班·住宿·知识库</text>
+
+        <line x1="408" y1="224" x2="448" y2="224" stroke="#06b6d4" stroke-width="2" marker-end="url(#arrowBlue)"/>
+
+        <rect x="456" y="195" width="150" height="58" rx="10" fill="#fff" stroke="#06b6d4" stroke-width="2" filter="url(#shadow1)"/>
+        <text x="531" y="219" text-anchor="middle" font-size="12" font-weight="700" fill="#1e293b">📊 多维评分矩阵</text>
+        <text x="531" y="239" text-anchor="middle" font-size="10" fill="#64748b">6维度 × 2方案</text>
+
+        <line x1="606" y1="224" x2="646" y2="224" stroke="#06b6d4" stroke-width="2" marker-end="url(#arrowBlue)"/>
+
+        <rect x="654" y="195" width="150" height="58" rx="10" fill="#fff" stroke="#f59e0b" stroke-width="2" filter="url(#shadow1)"/>
+        <text x="729" y="219" text-anchor="middle" font-size="12" font-weight="700" fill="#1e293b">⚖️ 用户调节权重</text>
+        <text x="729" y="239" text-anchor="middle" font-size="10" fill="#64748b">滑块实时重算</text>
+
+        <line x1="804" y1="224" x2="844" y2="224" stroke="#f59e0b" stroke-width="2" marker-end="url(#arrowMem)"/>
+
+        <rect x="852" y="195" width="200" height="58" rx="10" fill="var(--primary-soft, #eef0ff)" stroke="#5b5fe8" stroke-width="2" filter="url(#shadow1)"/>
+        <text x="952" y="219" text-anchor="middle" font-size="12" font-weight="700" fill="#5b5fe8">✅ 推荐 + 证据链</text>
+        <text x="952" y="239" text-anchor="middle" font-size="10" fill="#64748b">"推荐云南，因为..."</text>
+
+        <!-- ===== Row C: Emergency ===== -->
+        <text x="30" y="325" font-size="15" font-weight="900" fill="#ef4444">场景 C：行程突发与动态调整</text>
+
+        <rect x="30" y="340" width="150" height="58" rx="10" fill="#fef2f2" stroke="#ef4444" stroke-width="2" filter="url(#shadow1)"/>
+        <text x="105" y="364" text-anchor="middle" font-size="12" font-weight="700" fill="#991b1b">🚨 外部事件触发</text>
+        <text x="105" y="384" text-anchor="middle" font-size="10" fill="#7f1d1d">天气预警/航班取消</text>
+
+        <line x1="180" y1="369" x2="220" y2="369" stroke="#ef4444" stroke-width="2" marker-end="url(#arrowRed)"/>
+
+        <rect x="228" y="340" width="180" height="58" rx="10" fill="#fff" stroke="#ef4444" stroke-width="2" filter="url(#shadow1)"/>
+        <text x="318" y="364" text-anchor="middle" font-size="12" font-weight="700" fill="#1e293b">🤖 影响分析</text>
+        <text x="318" y="384" text-anchor="middle" font-size="10" fill="#64748b">识别受影响环节</text>
+
+        <line x1="408" y1="369" x2="448" y2="369" stroke="#ef4444" stroke-width="2" marker-end="url(#arrowRed)"/>
+
+        <rect x="456" y="340" width="150" height="58" rx="10" fill="#fff" stroke="#06b6d4" stroke-width="2" filter="url(#shadow1)"/>
+        <text x="531" y="364" text-anchor="middle" font-size="12" font-weight="700" fill="#1e293b">🛡️ 生成 Plan B×2</text>
+        <text x="531" y="384" text-anchor="middle" font-size="10" fill="#64748b">含成本/时间评估</text>
+
+        <line x1="606" y1="369" x2="646" y2="369" stroke="#06b6d4" stroke-width="2" marker-end="url(#arrowBlue)"/>
+
+        <rect x="654" y="340" width="150" height="58" rx="10" fill="#fff" stroke="#f59e0b" stroke-width="2" filter="url(#shadow1)"/>
+        <text x="729" y="364" text-anchor="middle" font-size="12" font-weight="700" fill="#1e293b">👤 用户选择方案</text>
+        <text x="729" y="384" text-anchor="middle" font-size="10" fill="#64748b">比较代价后决定</text>
+
+        <line x1="804" y1="369" x2="844" y2="369" stroke="#f59e0b" stroke-width="2" marker-end="url(#arrowMem)"/>
+
+        <rect x="852" y="340" width="200" height="58" rx="10" fill="#10b981" opacity="0.9" filter="url(#shadow1)"/>
+        <text x="952" y="364" text-anchor="middle" font-size="12" font-weight="800" fill="#fff">✅ 一键串联执行</text>
+        <text x="952" y="384" text-anchor="middle" font-size="10" fill="rgba(255,255,255,0.85)">退改签+预订+通知</text>
+
+        <!-- ===== Bottom: Human Confirmation Gate ===== -->
+        <rect x="200" y="440" width="700" height="52" rx="26" fill="#fef2f2" stroke="#ef4444" stroke-width="2.5" filter="url(#shadow2)"/>
+        <text x="550" y="462" text-anchor="middle" font-size="14" font-weight="800" fill="#991b1b">🔐 人工确认卡点：涉及支付 / 退改签 / 隐私的操作，必须用户逐项确认</text>
+        <text x="550" y="482" text-anchor="middle" font-size="11" fill="#7f1d1d">AI 建议 → 用户勾选 → 二次确认 → 执行</text>
+
+        <!-- Connection lines to gate -->
+        <line x1="932" y1="108" x2="932" y2="130" stroke="#5b5fe8" stroke-width="1.5"/>
+        <line x1="952" y1="253" x2="952" y2="280" stroke="#06b6d4" stroke-width="1.5"/>
+        <line x1="952" y1="398" x2="952" y2="440" stroke="#ef4444" stroke-width="1.5"/>
+
+        <line x1="550" y1="130" x2="550" y2="435" stroke="#94a3b8" stroke-width="1" stroke-dasharray="4,4"/>
+        <line x1="932" y1="130" x2="200" y2="435" stroke="#94a3b8" stroke-width="0.5" stroke-dasharray="3,6" opacity="0.4"/>
+      </svg>
+    </div>
+  </section>
+
+  <!-- ================================================================ -->
+  <!-- Diagram 5: MCP Architecture -->
+  <!-- ================================================================ -->
+  <section class="diagram-section">
+    <h2>🔌 5. MCP 协议 — Agent 如何调用携程/飞猪等外部服务</h2>
+    <p class="subtitle">基于 Model Context Protocol (MCP)，Agent 通过标准化接口对接真实业务 API</p>
+
+    <div class="svg-wrap">
+      <svg viewBox="0 0 1100 620" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <linearGradient id="gradMCP" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0%" stop-color="#6366f1"/><stop offset="100%" stop-color="#a855f7"/>
+          </linearGradient>
+          <linearGradient id="gradServer" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0%" stop-color="#10b981"/><stop offset="100%" stop-color="#34d399"/>
+          </linearGradient>
+          <marker id="arrowPurple" markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto">
+            <path d="M0,0 L10,4 L0,8 Z" fill="#8b5cf6"/>
+          </marker>
+        </defs>
+
+        <!-- Three layers -->
+        <!-- Layer 1: Agent -->
+        <rect x="30" y="30" width="1040" height="80" rx="14" fill="url(#gradMCP)" opacity="0.06" stroke="#8b5cf6" stroke-width="1.5" stroke-dasharray="6,3"/>
+        <text x="50" y="55" font-size="13" font-weight="700" fill="#7c3aed">Agent 层 — Skill 编排</text>
+
+        <!-- Agent box -->
+        <rect x="80" y="65" width="200" height="65" rx="12" fill="#fff" stroke="#8b5cf6" stroke-width="2.5" filter="url(#shadow1)"/>
+        <text x="180" y="92" text-anchor="middle" font-size="15" font-weight="800" fill="#7c3aed">🤖 Travel Agent</text>
+        <text x="180" y="112" text-anchor="middle" font-size="11" fill="#64748b">LLM + Skill 系统 + 记忆</text>
+        <text x="180" y="126" text-anchor="middle" font-size="10" fill="#94a3b8">选择 Skill → 调用 MCP Tool</text>
+
+        <!-- Skills inside Agent -->
+        <rect x="320" y="55" width="720" height="42" rx="8" fill="var(--primary-soft, #eef0ff)" stroke="#c7d2fe" stroke-width="1"/>
+        <text x="340" y="72" font-size="11" font-weight="700" fill="#5b5fe8">🧩 Skills:</text>
+        <text x="400" y="72" font-size="11" fill="#4a4ed4">search_flights</text>
+        <text x="500" y="72" font-size="11" fill="#4a4ed4">compare_hotels</text>
+        <text x="610" y="72" font-size="11" fill="#4a4ed4">check_weather</text>
+        <text x="720" y="72" font-size="11" fill="#4a4ed4">monitor_trip</text>
+        <text x="820" y="72" font-size="11" fill="#4a4ed4">generate_plan_b</text>
+        <text x="940" y="72" font-size="11" fill="#4a4ed4">execute_rebook</text>
+        <text x="340" y="89" font-size="10" fill="#64748b">每个 Skill 封装了 Prompt 模板 + 工具调用序列 + 输出 Schema</text>
+
+        <!-- MCP Protocol layer -->
+        <rect x="30" y="130" width="1040" height="70" rx="14" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.5" stroke-dasharray="6,3"/>
+        <text x="50" y="155" font-size="13" font-weight="700" fill="#64748b">MCP 协议层 — 标准化 Tool 定义与安全通信</text>
+
+        <!-- MCP Protocol box -->
+        <rect x="100" y="160" width="900" height="30" rx="6" fill="#1e293b"/>
+        <text x="550" y="180" text-anchor="middle" font-size="11" font-weight="600" fill="#e2e8f0">MCP Protocol: Tool Definition (JSON Schema) · Transport (stdio/HTTP) · Auth (OAuth2.0/API Key) · Rate Limit · Retry</text>
+
+        <!-- Layer 3: MCP Servers -->
+        <rect x="30" y="220" width="1040" height="210" rx="14" fill="url(#gradServer)" opacity="0.05" stroke="#10b981" stroke-width="1.5" stroke-dasharray="6,3"/>
+        <text x="50" y="245" font-size="13" font-weight="700" fill="#10b981">MCP Server 层 — 封装第三方 API</text>
+
+        <!-- MCP Servers -->
+        <!-- Ctrip -->
+        <rect x="60" y="260" width="185" height="75" rx="10" fill="#fff" stroke="#10b981" stroke-width="2" filter="url(#shadow1)"/>
+        <text x="152" y="286" text-anchor="middle" font-size="13" font-weight="700" fill="#10b981">✈️ 携程 MCP Server</text>
+        <text x="152" y="304" text-anchor="middle" font-size="10" fill="#64748b">search_flights / search_hotels</text>
+        <text x="152" y="320" text-anchor="middle" font-size="10" fill="#94a3b8">book_order / refund / get_status</text>
+        <text x="152" y="334" text-anchor="middle" font-size="9" fill="#ef4444">🔒 OAuth2.0 用户授权</text>
+
+        <!-- Fliggy -->
+        <rect x="275" y="260" width="185" height="75" rx="10" fill="#fff" stroke="#10b981" stroke-width="2" filter="url(#shadow1)"/>
+        <text x="367" y="286" text-anchor="middle" font-size="13" font-weight="700" fill="#10b981">🐷 飞猪 MCP Server</text>
+        <text x="367" y="304" text-anchor="middle" font-size="10" fill="#64748b">search_flights / search_hotels</text>
+        <text x="367" y="320" text-anchor="middle" font-size="10" fill="#94a3b8">search_attractions / book_ticket</text>
+        <text x="367" y="334" text-anchor="middle" font-size="9" fill="#ef4444">🔒 OAuth2.0 用户授权</text>
+
+        <!-- Weather -->
+        <rect x="490" y="260" width="185" height="75" rx="10" fill="#fff" stroke="#10b981" stroke-width="2" filter="url(#shadow1)"/>
+        <text x="582" y="286" text-anchor="middle" font-size="13" font-weight="700" fill="#10b981">🌤️ 天气 MCP Server</text>
+        <text x="582" y="304" text-anchor="middle" font-size="10" fill="#64748b">get_forecast / get_alerts</text>
+        <text x="582" y="320" text-anchor="middle" font-size="10" fill="#94a3b8">poll_alerts (WebSocket)</text>
+        <text x="582" y="334" text-anchor="middle" font-size="9" fill="#10b981">✅ 仅需 API Key</text>
+
+        <!-- Knowledge RAG -->
+        <rect x="705" y="260" width="185" height="75" rx="10" fill="#fff" stroke="#10b981" stroke-width="2" filter="url(#shadow1)"/>
+        <text x="797" y="286" text-anchor="middle" font-size="13" font-weight="700" fill="#10b981">📚 知识库 MCP Server</text>
+        <text x="797" y="304" text-anchor="middle" font-size="10" fill="#64748b">search_docs / extract_facts</text>
+        <text x="797" y="320" text-anchor="middle" font-size="10" fill="#94a3b8">upload_file / get_course_rating</text>
+        <text x="797" y="334" text-anchor="middle" font-size="9" fill="#10b981">✅ 用户自有数据</text>
+
+        <!-- Notification -->
+        <rect x="920" y="260" width="130" height="75" rx="10" fill="#fff" stroke="#10b981" stroke-width="2" filter="url(#shadow1)"/>
+        <text x="985" y="286" text-anchor="middle" font-size="13" font-weight="700" fill="#10b981">📬 通知 MCP</text>
+        <text x="985" y="304" text-anchor="middle" font-size="10" fill="#64748b">send_sms</text>
+        <text x="985" y="320" text-anchor="middle" font-size="10" fill="#94a3b8">send_wechat</text>
+        <text x="985" y="334" text-anchor="middle" font-size="9" fill="#10b981">✅ API Key</text>
+
+        <!-- Connection arrows from Agent to MCP -->
+        <line x1="180" y1="130" x2="152" y2="255" stroke="#8b5cf6" stroke-width="1.5" stroke-dasharray="4,3" marker-end="url(#arrowPurple)"/>
+        <line x1="280" y1="130" x2="367" y2="255" stroke="#8b5cf6" stroke-width="1.5" stroke-dasharray="4,3" marker-end="url(#arrowPurple)"/>
+        <line x1="380" y1="130" x2="582" y2="255" stroke="#8b5cf6" stroke-width="1.5" stroke-dasharray="4,3" marker-end="url(#arrowPurple)"/>
+        <line x1="480" y1="130" x2="797" y2="255" stroke="#8b5cf6" stroke-width="1.5" stroke-dasharray="4,3" marker-end="url(#arrowPurple)"/>
+
+        <!-- Execution example box -->
+        <rect x="60" y="355" width="990" height="60" rx="10" fill="var(--warning-soft, #fffbeb)" stroke="#fde68a"/>
+        <text x="80" y="377" font-size="12" font-weight="800" fill="#92400e">📋 示例：Skill "execute_rebook" 的执行流程</text>
+        <text x="80" y="396" font-size="11" fill="#78716c">Agent 激活 execute_rebook Skill → Skill 按依赖图编排 MCP 调用 → 携程 MCP: cancel_order(id) → 携程 MCP: create_order(new_flight) → 飞猪 MCP: book_taxi(from, to) → 通知 MCP: send_wechat("改签完成")</text>
+        <text x="80" y="411" font-size="10" fill="#94a3b8">每个 MCP Tool 的输入/输出均为结构化 JSON Schema，Agent 不直接操作 API，避免了凭证泄露和幻觉调用</text>
+
+        <!-- Bottom: Safety -->
+        <rect x="250" y="440" width="600" height="80" rx="16" fill="#fef2f2" stroke="#ef4444" stroke-width="2" filter="url(#shadow2)"/>
+        <text x="550" y="466" text-anchor="middle" font-size="14" font-weight="800" fill="#991b1b">🔐 MCP 安全边界</text>
+        <text x="550" y="486" text-anchor="middle" font-size="11" fill="#7f1d1d">用户凭证存储在 MCP Server 端（非 LLM 上下文）· 支付类 Tool 需用户显式 auth · Token 有过期时间</text>
+        <text x="550" y="504" text-anchor="middle" font-size="11" fill="#7f1d1d">每次调用记录 audit log · Agent 不可绕过用户授权直接调用支付接口 · 金额超过阈值强制二次确认</text>
+
+        <!-- Key insight callout -->
+        <rect x="60" y="540" width="990" height="50" rx="10" fill="#eef0ff" stroke="#c7d2fe"/>
+        <text x="550" y="562" text-anchor="middle" font-size="12" font-weight="700" fill="#4a4ed4">💡 为什么用 MCP 而不是直接 Function Calling？MCP 将 API 凭证、限流、重试逻辑封装在 Server 端，Agent 只看到标准 Tool 接口</text>
+        <text x="550" y="580" text-anchor="middle" font-size="11" fill="#64748b">携程/飞猪无需原生支持 MCP — 我们开发 MCP Server 桥接层，对接其 Open API</text>
+      </svg>
+    </div>
+  </section>
+
+  <!-- ================================================================ -->
+  <!-- Diagram 6: Agent Skill Catalog -->
+  <!-- ================================================================ -->
+  <section class="diagram-section">
+    <h2>🧩 6. Agent Skill 目录 — 10 个核心 Skill</h2>
+    <p class="subtitle">每个 Skill = Prompt 模板 + MCP Tool 调用序列 + 结构化输出 Schema</p>
+
+    <div class="svg-wrap">
+      <svg viewBox="0 0 1100 700" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <marker id="arrowSkill" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+            <path d="M0,0 L8,3 L0,6 Z" fill="#94a3b8"/>
+          </marker>
+        </defs>
+
+        <!-- Skill Categories -->
+        <text x="30" y="32" font-size="14" font-weight="900" fill="#5b5fe8">📋 灵感激发</text>
+        <!-- inspiration skills -->
+        <rect x="30" y="45" width="230" height="65" rx="12" fill="#fff" stroke="#e8ecf1" stroke-width="1.5" filter="url(#shadow1)"/>
+        <text x="50" y="70" font-size="13" font-weight="700" fill="#1e293b">💡 inspire_travel</text>
+        <text x="50" y="88" font-size="10" fill="#64748b">输入：模糊兴趣（"想去温暖的地方"）</text>
+        <text x="50" y="102" font-size="10" fill="#94a3b8">→ 知识库RAG → 3个灵感方向+预算估算</text>
+
+        <rect x="290" y="45" width="230" height="65" rx="12" fill="#fff" stroke="#e8ecf1" stroke-width="1.5" filter="url(#shadow1)"/>
+        <text x="310" y="70" font-size="13" font-weight="700" fill="#1e293b">📎 ingest_knowledge</text>
+        <text x="310" y="88" font-size="10" fill="#64748b">输入：URL/文件/粘贴文本</text>
+        <text x="310" y="102" font-size="10" fill="#94a3b8">→ 实体提取 → 结构化→存入知识库RAG</text>
+
+        <text x="30" y="140" font-size="14" font-weight="900" fill="#06b6d4">📋 规划决策</text>
+        <!-- planning skills -->
+        <rect x="30" y="153" width="230" height="65" rx="12" fill="#fff" stroke="#06b6d4" stroke-width="1.5" filter="url(#shadow1)"/>
+        <text x="50" y="178" font-size="13" font-weight="700" fill="#1e293b">🗺️ plan_itinerary</text>
+        <text x="50" y="196" font-size="10" fill="#64748b">输入：目的地+天数+约束</text>
+        <text x="50" y="210" font-size="10" fill="#94a3b8">→ 天气API+交通API → 逐日行程表</text>
+
+        <rect x="290" y="153" width="230" height="65" rx="12" fill="#fff" stroke="#06b6d4" stroke-width="1.5" filter="url(#shadow1)"/>
+        <text x="310" y="178" font-size="13" font-weight="700" fill="#1e293b">⚖️ compare_options</text>
+        <text x="310" y="196" font-size="10" fill="#64748b">输入：2个方案+用户约束</text>
+        <text x="310" y="210" font-size="10" fill="#94a3b8">→ 并行调用4个MCP → 多维评分矩阵</text>
+
+        <rect x="550" y="153" width="230" height="65" rx="12" fill="#fff" stroke="#06b6d4" stroke-width="1.5" filter="url(#shadow1)"/>
+        <text x="570" y="178" font-size="13" font-weight="700" fill="#1e293b">💰 optimize_budget</text>
+        <text x="570" y="196" font-size="10" fill="#64748b">输入：行程+总预算</text>
+        <text x="570" y="210" font-size="10" fill="#94a3b8">→ 航班+住宿+消费API → 分配方案</text>
+
+        <rect x="810" y="153" width="260" height="65" rx="12" fill="#fff" stroke="#06b6d4" stroke-width="1.5" filter="url(#shadow1)"/>
+        <text x="830" y="178" font-size="13" font-weight="700" fill="#1e293b">🔍 search_flights</text>
+        <text x="830" y="196" font-size="10" fill="#64748b">输入：起终点+日期+偏好</text>
+        <text x="830" y="210" font-size="10" fill="#94a3b8">→ 携程MCP + 飞猪MCP → 比价列表</text>
+
+        <text x="30" y="248" font-size="14" font-weight="900" fill="#10b981">📋 行程守护</text>
+        <!-- monitoring skills -->
+        <rect x="30" y="261" width="230" height="65" rx="12" fill="#fff" stroke="#10b981" stroke-width="1.5" filter="url(#shadow1)"/>
+        <text x="50" y="286" font-size="13" font-weight="700" fill="#1e293b">🛡️ monitor_trip</text>
+        <text x="50" y="304" font-size="10" fill="#64748b">输入：行程计划+监控规则</text>
+        <text x="50" y="318" font-size="10" fill="#94a3b8">→ 定时轮询天气/航班/景点 → 主动推送</text>
+
+        <rect x="290" y="261" width="230" height="65" rx="12" fill="#fff" stroke="#10b981" stroke-width="1.5" filter="url(#shadow1)"/>
+        <text x="310" y="286" font-size="13" font-weight="700" fill="#1e293b">🔄 generate_plan_b</text>
+        <text x="310" y="304" font-size="10" fill="#64748b">输入：突发事件+受影响环节</text>
+        <text x="310" y="318" font-size="10" fill="#94a3b8">→ 约束求解 → 2-3个替代方案+代价评估</text>
+
+        <rect x="550" y="261" width="230" height="65" rx="12" fill="#fff" stroke="#10b981" stroke-width="1.5" filter="url(#shadow1)"/>
+        <text x="570" y="286" font-size="13" font-weight="700" fill="#1e293b">⚡ execute_rebook</text>
+        <text x="570" y="304" font-size="10" fill="#64748b">输入：Plan B + 用户授权</text>
+        <text x="570" y="318" font-size="10" fill="#94a3b8">→ 编排MCP链 → 退改签+预订+通知</text>
+
+        <rect x="810" y="261" width="260" height="65" rx="12" fill="#fff" stroke="#10b981" stroke-width="1.5" filter="url(#shadow1)"/>
+        <text x="830" y="286" font-size="13" font-weight="700" fill="#1e293b">🧠 manage_memory</text>
+        <text x="830" y="304" font-size="10" fill="#64748b">输入：用户反馈/新偏好</text>
+        <text x="830" y="318" font-size="10" fill="#94a3b8">→ 向量DB CRUD → 更新用户画像</text>
+
+        <!-- Skill composition flow -->
+        <text x="30" y="370" font-size="14" font-weight="900" fill="#f59e0b">🔗 Skill 编排示例 — "突发状况 Plan B"的完整 Skill 链</text>
+
+        <rect x="30" y="388" width="160" height="52" rx="10" fill="#fff" stroke="#f59e0b" stroke-width="2" filter="url(#shadow1)"/>
+        <text x="110" y="410" text-anchor="middle" font-size="12" font-weight="700" fill="#1e293b">monitor_trip</text>
+        <text x="110" y="428" text-anchor="middle" font-size="9" fill="#64748b">检测到暴雨预警</text>
+
+        <line x1="190" y1="414" x2="230" y2="414" stroke="#f59e0b" stroke-width="2" marker-end="url(#arrowMem)"/>
+        <text x="210" y="408" text-anchor="middle" font-size="8" fill="#94a3b8">触发</text>
+
+        <rect x="240" y="388" width="160" height="52" rx="10" fill="#fff" stroke="#f59e0b" stroke-width="2" filter="url(#shadow1)"/>
+        <text x="320" y="410" text-anchor="middle" font-size="12" font-weight="700" fill="#1e293b">generate_plan_b</text>
+        <text x="320" y="428" text-anchor="middle" font-size="9" fill="#64748b">生成2个方案</text>
+
+        <line x1="400" y1="414" x2="440" y2="414" stroke="#f59e0b" stroke-width="2" marker-end="url(#arrowMem)"/>
+        <text x="420" y="408" text-anchor="middle" font-size="8" fill="#94a3b8">用户选择</text>
+
+        <rect x="450" y="388" width="160" height="52" rx="10" fill="#fff" stroke="#f59e0b" stroke-width="2" filter="url(#shadow1)"/>
+        <text x="530" y="410" text-anchor="middle" font-size="12" font-weight="700" fill="#1e293b">execute_rebook</text>
+        <text x="530" y="428" text-anchor="middle" font-size="9" fill="#64748b">编排执行</text>
+
+        <line x1="610" y1="414" x2="650" y2="414" stroke="#f59e0b" stroke-width="2" marker-end="url(#arrowMem)"/>
+
+        <rect x="660" y="388" width="160" height="52" rx="10" fill="#10b981" opacity="0.9" filter="url(#shadow1)"/>
+        <text x="740" y="410" text-anchor="middle" font-size="12" font-weight="800" fill="#fff">✅ 执行完成</text>
+        <text x="740" y="428" text-anchor="middle" font-size="9" fill="rgba(255,255,255,0.85)">通知已发送</text>
+
+        <!-- MCP calls detail -->
+        <rect x="450" y="460" width="600" height="90" rx="10" fill="#f8fafc" stroke="#e8ecf1"/>
+        <text x="470" y="482" font-size="12" font-weight="700" fill="#64748b">execute_rebook 内部的 MCP 调用链：</text>
+        <text x="470" y="502" font-size="11" fill="#334155">① 携程 MCP: cancel_booking(course_id) → {"status":"cancelled","refund":0}</text>
+        <text x="470" y="520" font-size="11" fill="#334155">② 携程 MCP: create_booking(museum_id, group_size=15) → {"status":"confirmed"}</text>
+        <text x="470" y="538" font-size="11" fill="#334155">③ 通知 MCP: send_wechat_template(all_students, "课程变更通知") → {"sent":15,"failed":0}</text>
+
+        <!-- Bottom summary -->
+        <rect x="30" y="570" width="1040" height="105" rx="14" fill="var(--primary-soft, #eef0ff)" stroke="#c7d2fe" stroke-width="2"/>
+        <text x="550" y="598" text-anchor="middle" font-size="14" font-weight="800" fill="#4a4ed4">🏗️ Skill 设计原则</text>
+        <text x="60" y="622" font-size="11" fill="#334155">① <strong>单一职责</strong>：每个 Skill 只做一件事（查航班 vs 订航班分开）</text>
+        <text x="60" y="640" font-size="11" fill="#334155">② <strong>可组合</strong>：Skill 之间通过结构化输出串联（上一个 Skill 的输出 → 下一个 Skill 的输入）</text>
+        <text x="60" y="658" font-size="11" fill="#334155">③ <strong>可观测</strong>：每个 Skill 执行时返回 trace（调了哪些 MCP、耗时、费用），用户可见</text>
+        <text x="60" y="676" font-size="11" fill="#334155">④ <strong>安全边界</strong>：支付/隐私类 Skill 强制用户二次确认；非支付类（查天气/查评价）静默执行</text>
+      </svg>
+    </div>
+  </section>
+
+  <!-- ================================================================ -->
+  <!-- Diagram 7: Competitive Landscape -->
+  <!-- ================================================================ -->
+  <section class="diagram-section">
+    <h2>🗺️ 7. 竞品格局 — 四类参考 & 我们的差异化</h2>
+    <p class="subtitle">现有平台多为"单点能力" — 我们把灵感·决策·记忆·执行·异常恢复整合成 Agent 工作台</p>
+
+    <div class="svg-wrap">
+      <svg viewBox="0 0 1100 580" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <marker id="arrowDiff" markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto">
+            <path d="M0,0 L10,4 L0,8 Z" fill="#5b5fe8"/>
+          </marker>
+        </defs>
+
+        <!-- Four quadrants -->
+        <!-- Q1: Direct competitors (top-left) -->
+        <rect x="30" y="30" width="500" height="220" rx="16" fill="#eef0ff" stroke="#c7d2fe" stroke-width="2"/>
+        <text x="55" y="58" font-size="15" font-weight="900" fill="#4a4ed4">🔍 第一类：直接竞品 — AI 旅行助手</text>
+
+        <rect x="45" y="72" width="150" height="50" rx="8" fill="#fff" stroke="#c7d2fe" stroke-width="1"/>
+        <text x="120" y="94" text-anchor="middle" font-size="12" font-weight="700" fill="#1e293b">携程「问道」</text>
+        <text x="120" y="110" text-anchor="middle" font-size="9" fill="#64748b">OTA内LLM·探索式搜索</text>
+
+        <rect x="205" y="72" width="150" height="50" rx="8" fill="#fff" stroke="#c7d2fe" stroke-width="1"/>
+        <text x="280" y="94" text-anchor="middle" font-size="12" font-weight="700" fill="#1e293b">TripGen</text>
+        <text x="280" y="110" text-anchor="middle" font-size="9" fill="#64748b">OTA chatbot·预订前咨询</text>
+
+        <rect x="365" y="72" width="150" height="50" rx="8" fill="#fff" stroke="#c7d2fe" stroke-width="1"/>
+        <text x="440" y="94" text-anchor="middle" font-size="12" font-weight="700" fill="#1e293b">GuideGeek</text>
+        <text x="440" y="110" text-anchor="middle" font-size="9" fill="#64748b">WhatsApp轻入口·人工审核</text>
+
+        <rect x="45" y="132" width="150" height="50" rx="8" fill="#fff" stroke="#c7d2fe" stroke-width="1"/>
+        <text x="120" y="154" text-anchor="middle" font-size="12" font-weight="700" fill="#1e293b">Google AI Canvas</text>
+        <text x="120" y="170" text-anchor="middle" font-size="9" fill="#64748b">对话+可视化画布+预订</text>
+
+        <rect x="205" y="132" width="150" height="50" rx="8" fill="#fff" stroke="#c7d2fe" stroke-width="1"/>
+        <text x="280" y="154" text-anchor="middle" font-size="12" font-weight="700" fill="#1e293b">MakeMyTrip AI</text>
+        <text x="280" y="170" text-anchor="middle" font-size="9" fill="#64748b">多语言·全旅程助手</text>
+
+        <rect x="365" y="132" width="150" height="50" rx="8" fill="#fff" stroke="#c7d2fe" stroke-width="1"/>
+        <text x="440" y="154" text-anchor="middle" font-size="12" font-weight="700" fill="#1e293b">ixigo</text>
+        <text x="440" y="170" text-anchor="middle" font-size="9" fill="#64748b">语音·agentic预订</text>
+
+        <!-- Q1 annotation -->
+        <rect x="45" y="195" width="470" height="40" rx="8" fill="#fff" stroke="#e8ecf1"/>
+        <text x="280" y="212" text-anchor="middle" font-size="10" fill="#64748b">启发：AI不是替代搜索而是补充复杂探索 · CUI轻入口 · 可视化画布 · 人工审核防幻觉</text>
+        <text x="280" y="227" text-anchor="middle" font-size="10" fill="#94a3b8">局限：止步于"建议"，不能执行 · 无长记忆 · 无突发Plan B</text>
+
+        <!-- Q2: Enterprise (top-right) -->
+        <rect x="560" y="30" width="510" height="220" rx="16" fill="#ecfdf5" stroke="#a7f3d0" stroke-width="2"/>
+        <text x="585" y="58" font-size="15" font-weight="900" fill="#166534">💼 第二类：企业差旅 — 执行闭环</text>
+
+        <rect x="575" y="72" width="150" height="50" rx="8" fill="#fff" stroke="#a7f3d0" stroke-width="1"/>
+        <text x="650" y="94" text-anchor="middle" font-size="12" font-weight="700" fill="#1e293b">Navan</text>
+        <text x="650" y="110" text-anchor="middle" font-size="9" fill="#64748b">Travel+Expense+Payment</text>
+
+        <rect x="735" y="72" width="150" height="50" rx="8" fill="#fff" stroke="#a7f3d0" stroke-width="1"/>
+        <text x="810" y="94" text-anchor="middle" font-size="12" font-weight="700" fill="#1e293b">TravelPerk</text>
+        <text x="810" y="110" text-anchor="middle" font-size="9" fill="#64748b">AI bot Juno·自动化报销</text>
+
+        <rect x="895" y="72" width="160" height="50" rx="8" fill="#fff" stroke="#a7f3d0" stroke-width="1"/>
+        <text x="975" y="94" text-anchor="middle" font-size="12" font-weight="700" fill="#1e293b">Amex GBT</text>
+        <text x="975" y="110" text-anchor="middle" font-size="9" fill="#64748b">全球服务·政策合规</text>
+
+        <rect x="575" y="132" width="150" height="50" rx="8" fill="#fff" stroke="#a7f3d0" stroke-width="1"/>
+        <text x="650" y="154" text-anchor="middle" font-size="12" font-weight="700" fill="#1e293b">SAP Concur</text>
+        <text x="650" y="170" text-anchor="middle" font-size="9" fill="#64748b">报销审批·财务合规标杆</text>
+
+        <rect x="735" y="132" width="320" height="50" rx="8" fill="#fff" stroke="#a7f3d0" stroke-width="1"/>
+        <text x="895" y="154" text-anchor="middle" font-size="12" font-weight="700" fill="#1e293b">📋 TripIt / Wanderlog / HomeToGo</text>
+        <text x="895" y="170" text-anchor="middle" font-size="9" fill="#64748b">行程管理·协作·AI筛选(第三类)</text>
+
+        <rect x="575" y="195" width="480" height="40" rx="8" fill="#fff" stroke="#e8ecf1"/>
+        <text x="815" y="212" text-anchor="middle" font-size="10" fill="#64748b">启发：预订报销一体化 · 企业合规 · 行程自动整理 · 多人协作</text>
+        <text x="815" y="227" text-anchor="middle" font-size="10" fill="#94a3b8">局限：缺乏灵感和决策支持 · 无AI推理 · 面向B端而非消费者</text>
+
+        <!-- Q3: Disruption (bottom-left) -->
+        <rect x="30" y="270" width="500" height="140" rx="16" fill="#fff5f5" stroke="#fecaca" stroke-width="2"/>
+        <text x="55" y="298" font-size="15" font-weight="900" fill="#991b1b">⚡ 第四类：突发/动态调整 — 异常恢复</text>
+
+        <rect x="45" y="312" width="220" height="55" rx="8" fill="#fff" stroke="#fecaca" stroke-width="1"/>
+        <text x="155" y="336" text-anchor="middle" font-size="12" font-weight="700" fill="#1e293b">FlightSense</text>
+        <text x="155" y="354" text-anchor="middle" font-size="9" fill="#64748b">实时延误预测+天气+对话AI</text>
+
+        <rect x="285" y="312" width="230" height="55" rx="8" fill="#fff" stroke="#fecaca" stroke-width="1"/>
+        <text x="400" y="336" text-anchor="middle" font-size="12" font-weight="700" fill="#1e293b">AIRS disruption recovery</text>
+        <text x="400" y="354" text-anchor="middle" font-size="9" fill="#64748b">航司 aircraft/crew/passenger recovery</text>
+
+        <rect x="45" y="378" width="470" height="24" rx="6" fill="#fff" stroke="#e8ecf1"/>
+        <text x="280" y="394" text-anchor="middle" font-size="10" fill="#991b1b">⚠️ 关键启发：Plan B不能只靠LLM生成文案 — 需要规则引擎+优化器+库存/订单工具+人工确认</text>
+
+        <!-- Center: Our differentiation -->
+        <rect x="230" y="440" width="640" height="110" rx="20" fill="url(#pipe1)" filter="url(#shadow2)"/>
+        <text x="550" y="472" text-anchor="middle" font-size="17" font-weight="900" fill="#fff">🧳 智行 TravelMind — 差异化定位</text>
+        <text x="550" y="498" text-anchor="middle" font-size="12" fill="rgba(255,255,255,0.9)">灵感激发(GuideGeek) + 决策对比(Google Canvas) + 长记忆(向量DB) + MCP编排执行(Navan) + 异常恢复(AIRS+LLM) + 可解释(溯源+不确定性)</text>
+        <text x="550" y="522" text-anchor="middle" font-size="11" fill="rgba(255,255,255,0.7)">现有平台是"单点能力" → 我们整合成可解释、可确认、可执行的 Agent 工作台</text>
+        <text x="550" y="542" text-anchor="middle" font-size="11" fill="rgba(255,255,255,0.5)">面向消费者(C端) + 可扩展企业版(B端，接入差旅政策合规)</text>
+
+        <!-- Arrows from quadrants to center -->
+        <line x1="280" y1="250" x2="400" y2="438" stroke="#5b5fe8" stroke-width="1.5" stroke-dasharray="6,3" marker-end="url(#arrowDiff)"/>
+        <line x1="815" y1="250" x2="700" y2="438" stroke="#5b5fe8" stroke-width="1.5" stroke-dasharray="6,3" marker-end="url(#arrowDiff)"/>
+        <line x1="280" y1="410" x2="400" y2="445" stroke="#5b5fe8" stroke-width="1.5" stroke-dasharray="6,3" marker-end="url(#arrowDiff)"/>
+      </svg>
+    </div>
+  </section>
+
+</div>
+</body>
+</html>
