@@ -462,30 +462,78 @@ function buildMemoryContext(text, entities) {
 // ---- 聊天式澄清追问：解析缺失行程槽位 ----
 function extractPurpose(text) {
   const t = (text || '').toLowerCase();
-  if (/出差|商务|开会|办公|公务/.test(t)) return '出差';
-  if (/游学|学习|上课|语言|进修|研学/.test(t)) return '游学';
-  if (/蜜月|结婚|新婚/.test(t)) return '蜜月';
-  if (/亲子|带娃|带孩子|带小孩|全家|一家/.test(t)) return '亲子';
-  if (/旅行|旅游|玩|度假|休闲|自由行|跟团/.test(t)) return '旅行';
+  if (/出差|商务|开会|办公|公务|团建|会议|考察|驻外|外派/.test(t)) return '出差';
+  if (/游学|学习|上课|语言|进修|研学|留学|交换|访学/.test(t)) return '游学';
+  if (/蜜月|结婚|新婚|度蜜月|旅拍|拍婚纱|婚纱照/.test(t)) return '度蜜月';
+  if (/亲子|带娃|带孩子|带小孩|全家|一家|遛娃|宝宝|儿童/.test(t)) return '亲子游';
+  if (/探亲|回家|回老家|看父母|看爸妈|奔丧|参加婚礼|喝喜酒|白事|红白事|老友|同学会|校友会|聚会|相聚|reunion/.test(t)) return '探亲';
+  if (/购物|扫货|买买买|逛街|代购|血拼|买东西/.test(t)) return '购物游';
+  if (/看病|就医|体检|养生|医保|疗养/.test(t)) return '看病/体检';
+  if (/露营|康养|朝圣|避暑|避寒|city\s*walk|citywalk|探店|穷游|旅行|旅游|玩|度假|休闲|自由行|跟团|徒步|自驾游|周边游|散心|逛/.test(t)) return '旅行';
   return '';
 }
 function extractClarifyDays(text) {
-  const m = text.match(/([0-9]{1,3}|[一二两三四五六七八九十]{1,3})\s*(天|日|周|个月)/);
+  const t = (text || '');
+  if (/一年/.test(t)) return 365;
+  if (/大半年/.test(t)) return 180;
+  if (/大半个月/.test(t)) return 20;
+  if (/半个月/.test(t)) return 15;
+  if (/寒假/.test(t)) return 30;
+  if (/暑假/.test(t)) return 45;
+  if (/寒暑假/.test(t)) return 40;
+  if (/二十几天|二十来天/.test(t)) return 25;
+  if (/十几天|十来天/.test(t)) return 15;
+  if (/一周多|一个多星期/.test(t)) return 10;
+  if (/小长假/.test(t)) return 5;
+  if (/黄金周|大长假/.test(t)) return 7;
+  if (/周末|双休/.test(t)) return 3;
+  // 中文区间：两三天→3、三四天→4、三五天→5（取下界后的上界）
+  const cnDigits = { 一: 1, 二: 2, 两: 2, 三: 3, 四: 4, 五: 5, 六: 6, 七: 7, 八: 8, 九: 9, 十: 10 };
+  const cr = t.match(/([一二两三四五六七八九十])\s*([三四五六七八九])\s*(天|日|周|个月)/);
+  if (cr && cnDigits[cr[2]] > cnDigits[cr[1]]) {
+    let n = cnDigits[cr[2]];
+    if (cr[3] === '周') n *= 7; else if (cr[3] === '个月') n *= 30;
+    return n;
+  }
+  // 范围：4到5天 / 4-5天（取上界）
+  const rng = t.match(/([0-9]{1,3}(?:\.[0-9]+)?|[一二两三四五六七八九十]{1,3})\s*[-到至]\s*([0-9]{1,3}(?:\.[0-9]+)?|[一二两三四五六七八九十]{1,3})\s*(天|日|周|个月)/);
+  if (rng) {
+    const lo = /^\d/.test(rng[1]) ? parseFloat(rng[1]) : cn2num(rng[1]);
+    const hi = /^\d/.test(rng[2]) ? parseFloat(rng[2]) : cn2num(rng[2]);
+    let n = Math.max(lo, hi); if (rng[3] === '周') n *= 7; else if (rng[3] === '个月') n *= 30;
+    if (n > 0 && n <= 730) return Math.round(n);
+  }
+  const m = t.match(/([0-9]{1,3}(?:\.[0-9]+)?|[一二两三四五六七八九十]{1,3})\s*(天|日|周|个月)/);
   if (!m) return 0;
-  let n = /^\d+$/.test(m[1]) ? parseInt(m[1], 10) : cn2num(m[1]);
+  let n = /^\d/.test(m[1]) ? parseFloat(m[1]) : cn2num(m[1]);
   if (m[2] === '周') n *= 7;
   else if (m[2] === '个月') n *= 30;
-  return n > 0 && n <= 365 ? n : 0;
+  return n > 0 && n <= 365 ? Math.round(n) : 0;
 }
 function extractClarifyBudget(text) {
   const t = (text || '').toLowerCase();
+  // 免费 / 零预算
+  if (/免费|不花钱|预算0|零预算|0元/.test(t)) return '0元/免费';
+  // 中文近似金额（无阿拉伯数字时兜底）
+  if (/一两?百/.test(t)) return fmtYuan(200);
+  if (/两三百/.test(t)) return fmtYuan(300);
+  if (/三四百/.test(t)) return fmtYuan(400);
+  if (/几百/.test(t)) return fmtYuan(500);
+  if (/千把|一两千|两三千|三四千/.test(t)) return fmtYuan(2500);
+  if (/五六千/.test(t)) return fmtYuan(5500);
+  if (/七八千/.test(t)) return fmtYuan(7500);
+  if (/小一万|一万出头|大几千/.test(t)) return fmtYuan(10000);
+  if (/万把|一两万/.test(t)) return fmtYuan(15000);
+  if (/两三万/.test(t)) return fmtYuan(25000);
+  if (/三四万/.test(t)) return fmtYuan(35000);
+  if (/几万/.test(t)) return fmtYuan(30000);
   // 识别「每天/每人/每晚」等按单位表述，保留 /天 语义
   const perUnit = /每\s*天|每日|每晚|每人|人均|\/\s*天|\/\s*人|\/\s*晚/.test(t);
 
-  // 1) 关键词前缀：预算5000、每天1000、大概1万
-  const m1 = t.match(/(?:预算|大概|大约|准备|花|要|用|每天|每日|人均|每晚)\s*([0-9]{1,6}(?:\.[0-9]+)?)(?:\s*(?:万|千|k|w|元|块|rmb|¥))?(?:\s*(?:左右|以内|上下))?/);
-  // 2) 纯货币单位：5000元、1万、300块
-  const m2 = t.match(/([0-9]{1,6}(?:\.[0-9]+)?)\s*(?:万|千|k|w|元|块|rmb|¥)(?:\s*(?:左右|以内|上下))?/);
+  // 1) 关键词前缀：预算5000、每天1000、控制在800、不超过1000、大概1万、总共2万
+  const m1 = t.match(/(?:预算|大概|大约|准备|花|要|用|控制在|不超过|低于|总共|合计|一共|总计|全部|估摸|差不多|每天|每日|人均|每晚)\s*([0-9]{1,6}(?:\.[0-9]+)?)(?:\s*(?:万|千|k|w|元|块|rmb|¥|刀|美元|美金|欧元|英镑))?(?:\s*(?:左右|以内|上下))?/);
+  // 2) 纯货币单位：5000元、1万、300块、500刀
+  const m2 = t.match(/([0-9]{1,6}(?:\.[0-9]+)?)\s*(?:万|千|k|w|元|块|rmb|¥|刀|美元|美金|欧元|英镑)(?:\s*(?:左右|以内|上下))?/);
   // 3) 每单位形式：1000/天、1000元/天、1000每天、1000一天
   const m3 = t.match(/([0-9]{1,6}(?:\.[0-9]+)?)\s*(?:元|块|rmb|¥)?\s*(?:\/|每|一)\s*(天|日|晚|人|夜)(?:\s*(?:左右|以内|上下))?/);
 
@@ -499,7 +547,7 @@ function extractClarifyBudget(text) {
   }
   if (!raw) {
     if (/穷游|省钱|便宜|经济|低预算/.test(t)) return '经济型/省钱优先';
-    if (/不差钱|高端|豪华|奢华|上限高|品质/.test(t)) return '高端/品质优先';
+    if (/不差钱|高端|豪华|奢华|上限高|品质|上不封顶|没上限|随便花|不差钱/.test(t)) return '高端/品质优先';
     return '';
   }
   let n = parseFloat(raw);
