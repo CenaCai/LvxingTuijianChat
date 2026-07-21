@@ -19,6 +19,23 @@ const toast = document.getElementById('toast');
 // ----- State -----
 let isTyping = false;
 const MEM_KEY = 'travelmind_mem';
+// 记忆中心「标签」下拉框静态配置（差旅偏好维度）
+const MEM_TAGS = [
+  '饮食偏好',
+  '预算习惯',
+  '出行节奏',
+  '住宿偏好',
+  '交通偏好',
+  '出行同伴',
+  '兴趣主题',
+  '忌讳/禁忌',
+  '健康与体力',
+  '语言偏好',
+  '气候偏好',
+  '购物偏好',
+  '证件与签证',
+  '其他',
+];
 const DEFAULT_MEMORIES = [
   { label: '饮食偏好', value: '少辣、清淡为主', locked: true },
   { label: '预算习惯', value: '800-1200元/天（含住宿）', locked: false },
@@ -727,11 +744,18 @@ function renderMemoryPage() {
 }
 
 function initMemory() {
+  // 用静态标签填充下拉框
+  const sel = document.getElementById('memKey');
+  if (sel) {
+    const opts = MEM_TAGS.map(t => `<option value="${esc(t)}">${esc(t)}</option>`).join('');
+    sel.innerHTML = '<option value="">选择标签…</option>' + opts;
+  }
   const addBtn = document.getElementById('memAddBtn');
   if (addBtn) addBtn.addEventListener('click', () => {
     const k = document.getElementById('memKey').value.trim();
     const v = document.getElementById('memVal').value.trim();
-    if (!k || !v) { showToast('⚠️ 请填写标签和值'); return; }
+    if (!k) { showToast('⚠️ 请先选择标签'); return; }
+    if (!v) { showToast('⚠️ 请填写记忆内容'); return; }
     addMemories([{ label: k, value: v }]);
     document.getElementById('memKey').value = '';
     document.getElementById('memVal').value = '';

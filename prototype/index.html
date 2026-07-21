@@ -285,7 +285,9 @@
         <div class="mem-panel">
           <h3>📌 长期记忆（跨行程复用）</h3>
           <div class="mem-add">
-            <input type="text" id="memKey" placeholder="标签，如 饮食偏好" />
+            <select id="memKey" aria-label="记忆标签">
+              <option value="">选择标签…</option>
+            </select>
             <input type="text" id="memVal" placeholder="值，如 清淡少辣" />
             <button class="btn" id="memAddBtn">添加</button>
           </div>

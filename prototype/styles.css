@@ -1038,11 +1038,12 @@ a { color: var(--blue); text-decoration: none; }
 
 /* 记忆中心 - 添加表单 */
 .mem-add { display: flex; gap: 8px; margin-bottom: 12px; flex-wrap: wrap; }
-.mem-add input {
+.mem-add input, .mem-add select {
   flex: 1; min-width: 120px; padding: 8px 12px; border: 1px solid var(--line, #e5e7eb);
   border-radius: 8px; font-size: 13px; outline: none; background: var(--bg-card, #fff); color: var(--ink, #1f2937);
 }
-.mem-add input:focus { border-color: var(--blue, #2f8fff); }
+.mem-add select { cursor: pointer; max-width: 160px; }
+.mem-add input:focus, .mem-add select:focus { border-color: var(--blue, #2f8fff); }
 .mem-list { display: flex; flex-direction: column; gap: 8px; }
 .mem-list .mem-row { display: flex; align-items: center; gap: 10px; background: var(--bg-card, #fff); border: 1px solid var(--line, #e5e7eb); border-radius: 10px; padding: 10px 12px; }
 .mem-list .mem-row > div { flex: 1; }
