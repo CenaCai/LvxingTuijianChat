@@ -17,12 +17,12 @@
 npm install
 
 # 2. 启动（同时托管前端 + /api/ctrip 代理）
-npm start
+npm start            # 默认端口 6000
 # 或自定义端口：
 PORT=8080 npm start
 
 # 3. 浏览器打开
-open http://localhost:3000
+open http://localhost:6000
 ```
 
 > 依赖 Node.js 18+（使用内置 fetch）。无需 Python。
