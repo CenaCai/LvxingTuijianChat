@@ -204,7 +204,7 @@ function aiRespond(scene, text) {
 async function aiRespondReal(text) {
   const html = await ctripHtml(text);
   if (html && html.indexOf('⚠️ 查询失败') === -1) {
-    addMsg('ai', `<div class="ctrip-src">✈️ 携程问道 · 真实回答</div>` + html);
+    addMsg('ai', html);
   } else {
     addMsg('ai', `<p>⚠️ 暂时连不上携程问道，已回退到本地演示回复。</p>`);
     aiRespond(detect(text), text);   // 回退到原 canned 逻辑
@@ -530,8 +530,8 @@ async function runCompare() {
     ctripHtml(qBase + ` 先专门展开讲${a}。`),
     ctripHtml(qBase + ` 先专门展开讲${b}。`),
   ]);
-  if (aEl) aEl.innerHTML = `<div class="ctrip-src">✈️ 携程问道 · 真实回答</div>` + (htmlA || '<p>无结果</p>');
-  if (bEl) bEl.innerHTML = `<div class="ctrip-src">✈️ 携程问道 · 真实回答</div>` + (htmlB || '<p>无结果</p>');
+  if (aEl) aEl.innerHTML = (htmlA || '<p>无结果</p>');
+  if (bEl) bEl.innerHTML = (htmlB || '<p>无结果</p>');
 
   if (sumEl) {
     sumEl.innerHTML = '<p class="loading">⏳ 正在生成综合建议…</p>';
@@ -564,7 +564,7 @@ function initMonitor() {
     out.innerHTML = '<p class="loading">⏳ 正在向携程问道查询「' + esc(q) + '」…</p>';
     setStatus('查询中...', true);
     const html = await ctripHtml(q);
-    out.innerHTML = `<div class="ctrip-src">✈️ 携程问道 · 真实回答</div>` + (html || '<p>无结果</p>');
+    out.innerHTML = (html || '<p>无结果</p>');
     setStatus('就绪');
   };
   btn.addEventListener('click', go);
