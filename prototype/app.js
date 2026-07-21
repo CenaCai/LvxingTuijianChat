@@ -18,7 +18,7 @@ const toast = document.getElementById('toast');
 
 // ----- State -----
 let isTyping = false;
-let clarifyState = { active: false, dest: '', collected: { days: 0, purpose: '', budget: '', notes: '' } };
+let clarifyState = { active: false, dest: '', collected: { days: 0, purpose: '', budget: '', from: '', notes: '' } };
 const MEM_KEY = 'travelmind_mem';
 // 记忆中心「标签」下拉框静态配置（差旅偏好维度）
 const MEM_TAGS = [
@@ -74,6 +74,28 @@ const confirmedTripMemLabels = new Set();
 // 用户点击「重新设定」后排除的行程特定记忆标签（不再显示为待确认）
 const rejectedTripMemLabels = new Set();
 
+// 按目的地持久化用户「沿用/排除」历史行程特定记忆的选择，避免刷新后重复弹出
+const TRIP_CONFIRM_KEY = 'travelmind_trip_confirmed';
+const TRIP_REJECT_KEY = 'travelmind_trip_rejected';
+function resetTripLabelStateForDest(dest) {
+  confirmedTripMemLabels.clear();
+  rejectedTripMemLabels.clear();
+  if (!dest) return;
+  try {
+    const c = JSON.parse(localStorage.getItem(TRIP_CONFIRM_KEY) || '{}');
+    const r = JSON.parse(localStorage.getItem(TRIP_REJECT_KEY) || '{}');
+    if (c.dest === dest && Array.isArray(c.labels)) c.labels.forEach(l => confirmedTripMemLabels.add(l));
+    if (r.dest === dest && Array.isArray(r.labels)) r.labels.forEach(l => rejectedTripMemLabels.add(l));
+  } catch {}
+}
+function saveTripLabelState() {
+  try {
+    const dest = (tripState && tripState.dest) || '';
+    localStorage.setItem(TRIP_CONFIRM_KEY, JSON.stringify({ dest, labels: Array.from(confirmedTripMemLabels) }));
+    localStorage.setItem(TRIP_REJECT_KEY, JSON.stringify({ dest, labels: Array.from(rejectedTripMemLabels) }));
+  } catch {}
+}
+
 // ----- 行程状态（chat ↔ 行程监控 联动的单一数据源）-----
 const TRIP_KEY = 'travelmind_trip';
 function loadTrip() {
@@ -86,6 +108,7 @@ function saveTrip() {
   try { localStorage.setItem(TRIP_KEY, JSON.stringify(tripState)); } catch {}
 }
 let tripState = loadTrip();
+resetTripLabelStateForDest(tripState && tripState.dest);
 
 // 中文数字 → 阿拉伯数字（用于「五天」「十五天」等）
 function cn2num(s) {
@@ -116,8 +139,14 @@ function updateTripFromInput(text) {
   }
 
   // 目的地关键词
-  const dest = t.match(/(清迈|曼谷|普吉|东京|大阪|京都|北海道|首尔|济州|巴厘岛|新加坡|新疆|云南|西藏|成都|重庆|三亚|厦门|大理|丽江|香格里拉|青海|甘肃|川西|稻城|冰岛|瑞士|新西兰|欧洲|日本|泰国|越南|摩洛哥)/);
-  if (dest && dest[1] !== trip.dest) { trip.dest = dest[1]; changed = true; }
+  const dest = t.match(/(北京|清迈|曼谷|普吉|东京|大阪|京都|北海道|首尔|济州|巴厘岛|新加坡|新疆|云南|西藏|成都|重庆|三亚|厦门|大理|丽江|香格里拉|青海|甘肃|川西|稻城|冰岛|瑞士|新西兰|欧洲|日本|泰国|越南|摩洛哥)/);
+  if (dest && dest[1] !== trip.dest) {
+    // 目的地切换时，重置沿用/排除状态、清空旧出发地，并加载新目的地对应的选择
+    resetTripLabelStateForDest(dest[1]);
+    trip.dest = dest[1];
+    trip.from = '';
+    changed = true;
+  }
 
   // 出发地
   const from = t.match(/(?:从)?([\u4e00-\u9fa5]{2,6})(?:出发)/);
@@ -429,7 +458,8 @@ function isUnderSpecified(text, entities) {
   const hasDuration = /时长|天|日|周|个月/.test(entStr);
   const hasBudget = /预算|元|万|钱/.test(t) || /元|万/.test(entStr);
   const hasPurpose = /学习|游学|蜜月|亲子|度假|出差|摄影|徒步|美食|购物|放松/.test(t);
-  const isConfirm = /沿用|确认|就用|可以|好|要/.test(t) && (t.length < 25);
+  const normalized = t.replace(/[，。！？、\s]/g, '');
+  const isConfirm = /^(沿用|确认|就用|可以|好|好啊|好吧|好的|行|行的|是的|没错|对的|对|ok|yes)(的|啊|吧|行)?$/i.test(normalized) && normalized.length < 25;
   if (isConfirm) return false;            // 明确确认不算信息不足
   return !hasDuration && !hasBudget && !hasPurpose;
 }
@@ -447,7 +477,11 @@ function buildMemoryContext(text, entities) {
   // 用户已排除的行程记忆不再参与本次澄清与展示
   const activeTrip = trip.filter(m => !rejectedTripMemLabels.has(m.label));
   const unconfirmedTrip = activeTrip.filter(m => !confirmedTripMemLabels.has(m.label));
-  const needsClarification = under && unconfirmedTrip.length > 0;
+  // 信息不足时进入澄清追问：
+  // - 有未确认的历史行程记忆 → 先问是否沿用
+  // - 没有历史行程记忆 → 直接问槽位
+  // - 历史记忆已全部确认/排除 → 把记忆拼入 prompt，不再追问
+  const needsClarification = under && (unconfirmedTrip.length > 0 || activeTrip.length === 0);
   return {
     stable,
     trip: activeTrip,
@@ -555,12 +589,32 @@ function extractClarifyBudget(text) {
   else if (/千/.test(t) || /k/.test(t)) n *= 1000;
   return fmtYuan(n) + suffix;
 }
+function extractClarifyFrom(text, dest) {
+  const t = (text || '');
+  const cities = ['北京','上海','广州','深圳','成都','重庆','杭州','南京','武汉','西安','天津','苏州','长沙','郑州','沈阳','青岛','宁波','东莞','无锡','厦门','福州','昆明','大连','哈尔滨','长春','石家庄','济南','合肥','南宁','贵阳','海口','兰州','银川','西宁','乌鲁木齐','拉萨','呼和浩特','南昌','太原','香港','台北','澳门'];
+  // 显式：从X出发 / 出发地X / 我在X / 起点X
+  const m1 = t.match(/(?:从|出发地|起点|我在)\s*([\u4e00-\u9fa5]{2,6})/);
+  if (m1) {
+    const c = cities.find(x => m1[1].includes(x) || x.includes(m1[1]));
+    if (c && c !== dest) return c;
+  }
+  // X出发 / X飞 / X到 / X去 —— 取首个非目的地的城市
+  const m2 = t.match(/([\u4e00-\u9fa5]{2,6})\s*(?:出发|起飞|飞|到|去|前往)/);
+  if (m2) {
+    const c = cities.find(x => m2[1].includes(x) || x.includes(m2[1]));
+    if (c && c !== dest) return c;
+  }
+  return '';
+}
+
 function buildClarifyQuestion(collected, dest) {
   const known = [];
+  if (collected.from) known.push(`从${collected.from}出发`);
   if (collected.days) known.push(`${collected.days}天`);
   if (collected.purpose) known.push(collected.purpose);
   if (collected.budget) known.push(`预算${collected.budget}`);
   const missing = [];
+  if (!collected.from) missing.push('从哪里出发');
   if (!collected.days) missing.push('去几天');
   if (!collected.purpose) missing.push('是去出差还是旅行');
   if (!collected.budget) missing.push('预算大概多少');
@@ -577,8 +631,11 @@ function handleClarifyReply(text) {
   const days = extractClarifyDays(text);
   const purpose = extractPurpose(text);
   const budget = extractClarifyBudget(text);
+  const from = extractClarifyFrom(text, clarifyState.dest);
   const prefs = extractPreferences(text);
   const c = clarifyState.collected;
+  // 如果原始输入已解析出出发地/天数，进入澄清时预填，避免重复询问
+  if (!c.from) c.from = from || ((tripState && tripState.dest === clarifyState.dest) ? tripState.from : '');
   if (days && !c.days) c.days = days;
   if (purpose && !c.purpose) c.purpose = purpose;
   if (budget && !c.budget) c.budget = budget;
@@ -590,8 +647,8 @@ function handleClarifyReply(text) {
     if (budgetPref && !c.budget) c.budget = budgetPref.value;
     c.notes = prefs.map(p => p.label + '：' + p.value).join('；');
   }
-  if (c.days && c.purpose && c.budget) {
-    const full = `我想去${clarifyState.dest}${c.purpose}，${c.days}天，预算${c.budget}` +
+  if (c.from && c.days && c.purpose && c.budget) {
+    const full = `我想从${c.from}去${clarifyState.dest}${c.purpose}，${c.days}天，预算${c.budget}` +
       (c.notes ? '，' + c.notes : '') + '，请帮我规划行程。';
     clarifyState.active = false;
     aiRespondReal(full);
@@ -669,12 +726,27 @@ async function aiRespondReal(text) {
     added.map(m => `<code>${esc(m.label + ': ' + m.value)}</code>`).join(' ') + '</div>';
   setDetail((stageWrap._detail || '') + memDetail);
 
-  // 若输入过短且存在未确认的行程特定记忆，先澄清而非直接调用 AI
+  // 若输入信息不足，先澄清而非直接调用 AI
   if (memCtx.needsClarification) {
     setStage(3, 'pending');
     setStage(4, 'pending');
     setStage(5, 'pending');
-    renderClarificationCard(text, memCtx.unconfirmedTrip, stageWrap);
+    if (memCtx.unconfirmedTrip.length > 0) {
+      renderClarificationCard(text, memCtx.unconfirmedTrip, stageWrap);
+    } else {
+      // 没有历史行程记忆需要确认时，直接在阶段条气泡里进入聊天式槽位追问
+      enterClarifyMode([], stageWrap, memCtx.injectable);
+    }
+    return;
+  }
+
+  // 行程类请求若仍缺少出发地，先追问出发地，避免 AI 给出随机的 inbound 航班
+  const isTripScene = ['general', 'route', 'guide', 'budget'].includes(scene);
+  if (isTripScene && !(tripState && tripState.from)) {
+    setStage(3, 'pending');
+    setStage(4, 'pending');
+    setStage(5, 'pending');
+    enterClarifyMode([], stageWrap, memCtx.injectable);
     return;
   }
 
@@ -750,25 +822,56 @@ function renderClarificationCard(originalText, tripMems, stageWrap) {
 // 确认沿用：把行程特定记忆拼回 prompt，重新走完整 6 阶段
 function sendAsUserConfirm(originalText, summary) {
   clarifyState.active = false;
+  saveTripLabelState();
   const tid = addTyping();
   setTimeout(() => { remTyping(tid); aiRespondReal(originalText + '\n\n（本次行程沿用：' + summary + '）'); }, 400);
 }
 
 // 拒绝沿用：把当前行程特定记忆标记为已排除，进入聊天式澄清追问
-function sendAsUserReject(originalText, tripMems) {
+function enterClarifyMode(tripMems, stageWrap, injectable) {
   if (tripMems && tripMems.length) {
     tripMems.forEach(m => rejectedTripMemLabels.add(m.label));
+    saveTripLabelState();
   }
   clarifyState = {
     active: true,
     dest: (tripState && tripState.dest) || '',
-    collected: { days: 0, purpose: '', budget: '', notes: '' }
+    collected: {
+      days: (tripState && tripState.days) || 0,
+      purpose: '',
+      budget: '',
+      from: (tripState && tripState.from) || '',
+      notes: ''
+    }
   };
+  // 从已确认的历史行程记忆里预填时长/总预算，减少重复提问
+  if (injectable && injectable.length) {
+    const memDays = injectable.find(m => m.label === '行程时长');
+    if (memDays && !clarifyState.collected.days) {
+      const d = extractClarifyDays(memDays.value);
+      if (d) clarifyState.collected.days = d;
+    }
+    const memBudget = injectable.find(m => m.label === '总预算');
+    if (memBudget && !clarifyState.collected.budget) {
+      clarifyState.collected.budget = memBudget.value;
+    }
+  }
+  const question = `<p>${esc(buildClarifyQuestion(clarifyState.collected, clarifyState.dest))}</p>`;
+  if (stageWrap) {
+    stageWrap.innerHTML += question;
+    scrollChat();
+    return;
+  }
   const tid = addTyping();
   setTimeout(() => {
     remTyping(tid);
-    addMsg('ai', `<p>${esc(buildClarifyQuestion(clarifyState.collected, clarifyState.dest))}</p>`);
+    addMsg('ai', question);
   }, 300);
+}
+
+function sendAsUserReject(originalText, tripMems) {
+  addMsg('user', '<p>重新设定</p>');
+  enterClarifyMode(tripMems);
 }
 
 // ============================================
