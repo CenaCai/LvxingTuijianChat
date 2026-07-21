@@ -299,12 +299,12 @@ function sendMessage() {
   addMsg('user', `<p>${esc(text)}</p>`);
   const tid = addTyping();
 
-  setTimeout(() => {
+  setTimeout(async () => {
     remTyping(tid);
     if (clarifyState.active) {
-      handleClarifyReply(text);   // 处于澄清追问模式，解析用户补充信息
+      await handleClarifyReply(text);   // 处于澄清追问模式，解析用户补充信息
     } else {
-      aiRespondReal(text);        // 真实调用AI 助手；失败则回退到本地演示回复
+      await aiRespondReal(text);        // 真实调用AI 助手；失败则回退到本地演示回复
     }
     isTyping = false;
     sendBtn.disabled = false;
@@ -631,7 +631,15 @@ function buildClarifyQuestion(collected, dest) {
 function isClarifyDone(text) {
   return /^(没有|暂无|没要求|不需要|就这些|够了|ok|好的|行|可以|就这样|随便|无)$/i.test(text.trim());
 }
-function handleClarifyReply(text) {
+async function handleClarifyReply(text) {
+  // 用户在澄清过程中突然问平台 FAQ（如"退机票"），应优先退出澄清、由知识库直接作答
+  const kbResults = await queryKb(text, 3);
+  if (kbDirectAnswerable(kbResults, text)) {
+    clarifyState.active = false;
+    await aiRespondReal(text);
+    return;
+  }
+
   const days = extractClarifyDays(text);
   const purpose = extractPurpose(text);
   const budget = extractClarifyBudget(text);
@@ -662,7 +670,7 @@ function handleClarifyReply(text) {
     const full = `我想从${c.from}去${clarifyState.dest}${c.purpose}，${c.days}天，预算${c.budget}` +
       (c.notes ? '，' + c.notes : '') + '，请帮我规划行程。';
     clarifyState.active = false;
-    aiRespondReal(full);
+    await aiRespondReal(full);
   } else {
     addMsg('ai', `<p>${esc(buildClarifyQuestion(c, clarifyState.dest))}</p>`);
   }
