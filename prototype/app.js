@@ -223,7 +223,7 @@ async function aiRespondReal(text) {
   if (html && html.indexOf('⚠️ 查询失败') === -1) {
     addMsg('ai', html);
   } else {
-    addMsg('ai', `<p>⚠️ 暂时连不上AI 助手，已回退到本地演示回复。</p>`);
+    addMsg('ai', `<p>⚠️ 暂时连不上 AI 助手，已回退到本地演示回复。</p>`);
     aiRespond(detect(text), text);   // 回退到原 canned 逻辑
   }
 }
@@ -491,6 +491,20 @@ function rGeneral() {
 // ============================================
 // Shared: call Ctrip 问道, return safe HTML (or error marker)
 // ============================================
+// 对后端返回 HTML 做品牌中性化处理（AI 对话视图不暴露供应商品牌）
+function sanitizeVendorBrand(html) {
+  if (!html) return html;
+  return html
+    .replace(/携程智能旅行助手\s*小道\s*Wendao/gi, 'AI 旅行助手')
+    .replace(/携程智能旅行助手/g, 'AI 旅行助手')
+    .replace(/小道Wendao/gi, 'AI 旅行助手')
+    .replace(/Wendao/gi, '')
+    .replace(/携程问道/g, 'AI 助手')
+    .replace(/携程/g, 'OTA')
+    .replace(/\s{2,}/g, ' ')
+    .trim();
+}
+
 async function ctripHtml(query) {
   try {
     const res = await fetch('/api/ctrip', {
@@ -500,7 +514,8 @@ async function ctripHtml(query) {
     });
     if (!res.ok) throw new Error('HTTP ' + res.status);
     const data = await res.json();
-    return (data && data.html) ? data.html : '<p>' + esc((data && data.text) || '') + '</p>';
+    const raw = (data && data.html) ? data.html : '<p>' + esc((data && data.text) || '') + '</p>';
+    return sanitizeVendorBrand(raw);
   } catch (e) {
     return '<p>⚠️ 查询失败，请重试。</p>';
   }
@@ -538,8 +553,8 @@ async function runCompare() {
 
   const focusTxt = [...cmpSelectedFocus].length ? '，侧重' + [...cmpSelectedFocus].join('、') : '';
   const qBase = `对比旅行目的地：${a} 和 ${b}。请从预算、美食、自然风光、体验、适合人群、大致费用区间等角度分析各自优劣${focusTxt}。`;
-  if (aEl) aEl.innerHTML = '<p class="loading">⏳ 正在向AI 助手查询「' + esc(a) + '」…</p>';
-  if (bEl) bEl.innerHTML = '<p class="loading">⏳ 正在向AI 助手查询「' + esc(b) + '」…</p>';
+  if (aEl) aEl.innerHTML = '<p class="loading">⏳ 正在向 AI 助手查询「' + esc(a) + '」…</p>';
+  if (bEl) bEl.innerHTML = '<p class="loading">⏳ 正在向 AI 助手查询「' + esc(b) + '」…</p>';
   if (sumEl) sumEl.innerHTML = '';
   setStatus('对比查询中...', true);
 
@@ -578,7 +593,7 @@ function initMonitor() {
   const go = async () => {
     const q = (input.value || '').trim();
     if (!q) { showToast('⚠️ 请输入查询内容'); return; }
-    out.innerHTML = '<p class="loading">⏳ 正在向AI 助手查询「' + esc(q) + '」…</p>';
+    out.innerHTML = '<p class="loading">⏳ 正在向 AI 助手查询「' + esc(q) + '」…</p>';
     setStatus('查询中...', true);
     const html = await ctripHtml(q);
     out.innerHTML = (html || '<p>无结果</p>');
