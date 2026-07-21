@@ -5,7 +5,7 @@ const express = require('express');
 const { marked } = require('marked');
 const sanitizeHtml = require('sanitize-html');
 
-const PORT = process.env.PORT || 6000;
+const PORT = process.env.PORT || 6001;
 const CTRIP_ENDPOINT = 'https://wendao-skill-prod.ctrip.com/skill/query';
 
 // Load optional API key: env var > ~/.config/tripai-skill/api_key (per tripai-skill convention)
