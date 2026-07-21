@@ -604,6 +604,10 @@ function extractClarifyFrom(text, dest) {
     const c = cities.find(x => m2[1].includes(x) || x.includes(m2[1]));
     if (c && c !== dest) return c;
   }
+  // 兜底：文本里出现且非目的地的已知城市（应对「上海」这类只给城市名的简短回复）
+  for (const c of cities) {
+    if (t.includes(c) && c !== dest) return c;
+  }
   return '';
 }
 
@@ -639,6 +643,13 @@ function handleClarifyReply(text) {
   if (days && !c.days) c.days = days;
   if (purpose && !c.purpose) c.purpose = purpose;
   if (budget && !c.budget) c.budget = budget;
+  // 容错：澄清回复只给纯数字（如「5」「5000」）时按槽位语义兜底
+  const bareNum = text.replace(/[，。、\s]/g, '').match(/^(\d{1,6})$/);
+  if (bareNum) {
+    const n = parseInt(bareNum[1], 10);
+    if (!c.days && n <= 365) c.days = n;
+    else if (!c.budget) c.budget = fmtYuan(n);
+  }
   if (prefs.length) {
     // 稳定偏好（饮食/节奏/同伴等）写入长期记忆；预算/时长等行程特定信息只用于本次 query，不落盘
     const stablePrefs = prefs.filter(p => classifyMemory(p.label) === 'stable');
