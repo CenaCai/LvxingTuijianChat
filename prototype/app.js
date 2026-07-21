@@ -644,6 +644,16 @@ async function handleClarifyReply(text) {
   const purpose = extractPurpose(text);
   const budget = extractClarifyBudget(text);
   const from = extractClarifyFrom(text, clarifyState.dest);
+
+  // 用户在澄清中途切换成订具体服务（如"你有没有机票推荐"），且没有补槽位：
+  // 退出澄清交给主流程处理，避免一直重复追问同一套槽位。
+  const mentionsService = /机票|航班|酒店|住宿|签证|门票|火车票|租车|用车|邮轮|自由行|跟团/.test(text);
+  if (mentionsService && !(days || purpose || budget || from)) {
+    clarifyState.active = false;
+    await aiRespondReal(text);
+    return;
+  }
+
   const prefs = extractPreferences(text);
   const c = clarifyState.collected;
   // 如果原始输入已解析出出发地/天数，进入澄清时预填，避免重复询问
@@ -801,9 +811,13 @@ async function aiRespondReal(text) {
   setDetail((stageWrap._detail || '') + memDetail);
 
   // 平台知识库命中明细（位于记忆检索之后，便于对比「记忆 vs 知识库」两类来源）
-  if (kbResults.length) {
-    const kbDetail = `<div class="stage-detail"><span class="sd-tag sd-kb">📚 知识库命中 ${kbResults.length}${kbDirect ? ' · 直接引用' : ''}</span>` +
-      kbResults.slice(0, 3).map(k => `<code>${esc((k.category || '') + '/' + (k.subcategory || '') + ' · ' + (k.question || '').slice(0, 16))}</code>`).join(' ') + '</div>';
+  // 只展示/注入真正「可直接作答」的高置信知识库命中。
+  // TF-IDF 没有语义理解，服务推荐/行程规划类查询的低相关命中会干扰回答，故仅当 kbDirectAnswerable 为 true 时才使用。
+  const kbUseful = kbDirect;
+  if (kbResults.length && kbUseful) {
+    const display = kbResults.filter(k => (k.score || 0) >= 0.10).slice(0, 3);
+    const kbDetail = `<div class="stage-detail"><span class="sd-tag sd-kb">📚 知识库命中 ${display.length}${kbDirect ? ' · 直接引用' : ''}</span>` +
+      display.map(k => `<code>${esc((k.category || '') + '/' + (k.subcategory || '') + ' · ' + (k.question || '').slice(0, 16))}</code>`).join(' ') + '</div>';
     setDetail((stageWrap._detail || '') + kbDetail);
   }
 
@@ -823,9 +837,11 @@ async function aiRespondReal(text) {
   }
 
   // 行程类请求若仍缺少出发地，先追问出发地，避免 AI 给出随机的 inbound 航班。
-  // 知识库可直接作答的 FAQ 问题例外。
+  // 例外 1：知识库可直接作答的 FAQ 问题；例外 2：用户明显在问具体服务（机票/酒店/签证等），
+  // 此时直接交给 Ctrip 处理，它比固定追问更能回应服务类请求。
   const isTripScene = ['general', 'route', 'guide', 'budget'].includes(scene);
-  if (isTripScene && !(tripState && tripState.from) && !kbDirect) {
+  const mentionsService = /机票|航班|酒店|住宿|签证|门票|火车票|租车|用车|邮轮|自由行|跟团/.test(text);
+  if (isTripScene && !(tripState && tripState.from) && !kbDirect && !mentionsService) {
     setStage(3, 'pending');
     setStage(4, 'pending');
     setStage(5, 'pending');
@@ -840,8 +856,9 @@ async function aiRespondReal(text) {
     ? `${text}\n\n【用户长期偏好，请在建议中优先考虑】${memStr}`
     : text;
   // 把命中的平台知识库官方口径拼进 prompt，让 AI 优先采用，避免编造
-  if (kbResults && kbResults.length) {
-    const kbRef = kbResults.slice(0, 3).map(k => {
+  // 仅注入高置信命中，低相关 FAQ 会干扰服务类/行程类回答
+  if (kbResults && kbResults.length && kbUseful) {
+    const kbRef = kbResults.filter(k => (k.score || 0) >= 0.10).slice(0, 3).map(k => {
       const ans = (k.answer || '').replace(/\s+/g, ' ').trim().slice(0, 380);
       return `Q: ${k.question || ''}\nA: ${ans}`;
     }).join('\n\n');
@@ -869,27 +886,29 @@ async function aiRespondReal(text) {
       answer += `<div class="mem-noted trip-noted">🛡️ 已同步「行程监控」：<b>${esc(tripState.dest)}${tripState.days ? ' · ' + tripState.days + '天' : ''}</b>，可在左侧「行程监控」查看动态时间线。</div>`;
       renderMonitorTrip();
     }
-    if (kbResults && kbResults.length) {
-      const top = kbResults[0];
-      answer += `<div class="mem-noted kb-noted">📚 已引用平台知识库 <b>${kbResults.length}</b> 条（${esc((top.category || '') + '/' + (top.subcategory || ''))}）作为官方参考口径。</div>`;
+    if (kbResults && kbResults.length && kbUseful) {
+      const display = kbResults.filter(k => (k.score || 0) >= 0.10).slice(0, 3);
+      const top = display[0] || kbResults[0];
+      answer += `<div class="mem-noted kb-noted">📚 已引用平台知识库 <b>${display.length}</b> 条（${esc((top.category || '') + '/' + (top.subcategory || ''))}）作为官方参考口径。</div>`;
     }
     addMsg('ai', answer);
-  } else if (kbResults && kbResults.length) {
+  } else if (kbResults && kbResults.length && kbUseful) {
     // AI 引擎失败但知识库有高置信命中：直接引用官方口径作为兜底，避免只展示错误
     setStage(3, 'done');
     setStage(4, 'done');
     setStage(5, 'done');
     await sleep(150);
-    const top = kbResults[0];
-    let answer = `<div class="kb-fallback-hint">⚠️ AI 知识引擎今日额度已用完，以下直接引用平台知识库 <b>${kbResults.length}</b> 条官方口径：</div>` +
-      kbResults.slice(0, 3).map((k, i) => {
+    const display = kbResults.filter(k => (k.score || 0) >= 0.10).slice(0, 3);
+    const top = display[0] || kbResults[0];
+    let answer = `<div class="kb-fallback-hint">⚠️ AI 知识引擎今日额度已用完，以下直接引用平台知识库 <b>${display.length}</b> 条官方口径：</div>` +
+      display.map((k, i) => {
         const ans = esc((k.answer || '').replace(/\s+/g, ' ').trim()).replace(/\n/g, '<br>');
         return `<div class="kb-faq-item">
           <div class="kb-faq-q"><b>${i + 1}. ${esc(k.question || '')}</b> <span class="kb-faq-tag">${esc((k.category || '') + '/' + (k.subcategory || ''))}</span></div>
           <div class="kb-faq-a">${ans}</div>
         </div>`;
       }).join('') +
-      `<div class="mem-noted kb-noted">📚 已引用平台知识库 <b>${kbResults.length}</b> 条（${esc((top.category || '') + '/' + (top.subcategory || ''))}）作为官方参考口径。</div>`;
+      `<div class="mem-noted kb-noted">📚 已引用平台知识库 <b>${display.length}</b> 条（${esc((top.category || '') + '/' + (top.subcategory || ''))}）作为官方参考口径。</div>`;
     addMsg('ai', answer);
   } else {
     addMsg('ai', `<p>⚠️ 暂时连不上 AI 知识引擎，已回退到本地演示回复。</p>`);
