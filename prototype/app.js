@@ -710,6 +710,41 @@ async function queryKb(text, topK = 3) {
   }
 }
 
+// 为 KB 直接作答判断提取候选匹配词（2-4 字中文子串，去重）
+function extractKbMatchTerms(text) {
+  const t = (text || '').replace(/[^\u4e00-\u9fa5a-z0-9]/gi, '').toLowerCase();
+  const terms = [];
+  for (let len = 4; len >= 2; len--) {
+    for (let i = 0; i + len <= t.length; i++) {
+      terms.push(t.slice(i, i + len));
+    }
+  }
+  return [...new Set(terms)];
+}
+
+// 判断当前查询是否可由平台知识库直接作答，从而跳过行程澄清/出发地追问。
+// 触发条件：命中分数足够 + 是知识型问句 + 非行程规划请求 + 查询词与命中内容实质重叠。
+function kbDirectAnswerable(kbResults, text) {
+  if (!kbResults || !kbResults.length) return false;
+  const top = kbResults[0];
+  if ((top.score || 0) < 0.10) return false;
+  // 明显的行程规划请求：不应由平台 FAQ 直接回答，仍需走澄清
+  if (/我想去|我要去|打算去|准备去|计划去|规划|推荐.*地方|哪里好|什么地方|哪个城市|攻略|路线|行程|旅游.*去|旅行.*去/.test(text)) return false;
+  // 知识型问句特征
+  if (!/怎么|如何|吗|什么|哪些|多少|多少钱|为什么|能否|可以吗|介绍|区别|规则|政策|条件|流程|收费|费用/.test(text)) return false;
+  const terms = extractKbMatchTerms(text);
+  if (!terms.length) return false;
+  // 若查询包含城市名，命中内容必须与「类别/子类别」匹配（避免问题正文里偶然提到城市造成的误匹配）
+  const hasCity = /北京|上海|广州|深圳|成都|重庆|杭州|南京|武汉|西安|天津|苏州|长沙|郑州|沈阳|青岛|宁波|东莞|无锡|厦门|福州|昆明|大连|哈尔滨|长春|石家庄|济南|合肥|南宁|贵阳|海口|兰州|银川|西宁|乌鲁木齐|拉萨|呼和浩特|南昌|太原|香港|台北|澳门/.test(text);
+  return kbResults.slice(0, 3).some(r => {
+    const catPath = ((r.category || '') + '/' + (r.subcategory || '')).toLowerCase();
+    if (terms.some(term => catPath.includes(term))) return true;
+    if (hasCity) return false;
+    const hay = catPath + ' ' + (r.question || '').toLowerCase();
+    return terms.some(term => hay.includes(term));
+  });
+}
+
 async function aiRespondReal(text) {
   // 阶段状态：pending / active / done
   const states = ['pending', 'pending', 'pending', 'pending', 'pending', 'pending'];
@@ -739,6 +774,7 @@ async function aiRespondReal(text) {
   const memCtx = buildMemoryContext(text, entities);
   // 平台知识库检索（本地 TF-IDF，无需联网模型）
   const kbResults = await queryKb(text, 3);
+  const kbDirect = kbDirectAnswerable(kbResults, text);
   setStage(2, 'done');
 
   // 阶段明细：稳定偏好 + 历史行程设定（区分是否沿用）
@@ -758,13 +794,14 @@ async function aiRespondReal(text) {
 
   // 平台知识库命中明细（位于记忆检索之后，便于对比「记忆 vs 知识库」两类来源）
   if (kbResults.length) {
-    const kbDetail = `<div class="stage-detail"><span class="sd-tag sd-kb">📚 知识库命中 ${kbResults.length}</span>` +
+    const kbDetail = `<div class="stage-detail"><span class="sd-tag sd-kb">📚 知识库命中 ${kbResults.length}${kbDirect ? ' · 直接引用' : ''}</span>` +
       kbResults.slice(0, 3).map(k => `<code>${esc((k.category || '') + '/' + (k.subcategory || '') + ' · ' + (k.question || '').slice(0, 16))}</code>`).join(' ') + '</div>';
     setDetail((stageWrap._detail || '') + kbDetail);
   }
 
-  // 若输入信息不足，先澄清而非直接调用 AI
-  if (memCtx.needsClarification) {
+  // 若输入信息不足，先澄清而非直接调用 AI。
+  // 但若知识库已高置信命中且问题是平台 FAQ 型，直接由 KB 作答，不再进入行程澄清。
+  if (memCtx.needsClarification && !kbDirect) {
     setStage(3, 'pending');
     setStage(4, 'pending');
     setStage(5, 'pending');
@@ -777,9 +814,10 @@ async function aiRespondReal(text) {
     return;
   }
 
-  // 行程类请求若仍缺少出发地，先追问出发地，避免 AI 给出随机的 inbound 航班
+  // 行程类请求若仍缺少出发地，先追问出发地，避免 AI 给出随机的 inbound 航班。
+  // 知识库可直接作答的 FAQ 问题例外。
   const isTripScene = ['general', 'route', 'guide', 'budget'].includes(scene);
-  if (isTripScene && !(tripState && tripState.from)) {
+  if (isTripScene && !(tripState && tripState.from) && !kbDirect) {
     setStage(3, 'pending');
     setStage(4, 'pending');
     setStage(5, 'pending');
