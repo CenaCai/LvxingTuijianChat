@@ -1,8 +1,8 @@
 # CSTS TravelChat — 您的AI 差旅助手
 
-> **现状说明**：本仓库当前是「前端交互原型 + 携程问道（TripAI）代理」，所有旅行数据均来自携程官方「问道」接口（`wendao-skill-prod.ctrip.com/skill/query`）。
-> - **对话**：自由输入经 `server.js` 代理调用携程问道，返回真实酒店 / 机票 / 火车票 / 景点 / 玩乐答案。
-> - **方案对比**：输入两个目的地 + 选择侧重点，由携程问道实时双栏对比并生成综合建议（真实数据）。
+> **现状说明**：本仓库当前是「前端交互原型 + AI 助手代理」，所有旅行数据均来自AI 助手数据接口（`wendao-skill-prod.ctrip.com/skill/query`）。
+> - **对话**：自由输入经 `server.js` 代理调用AI 助手，返回真实酒店 / 机票 / 火车票 / 景点 / 玩乐答案。
+> - **方案对比**：输入两个目的地 + 选择侧重点，由AI 助手实时双栏对比并生成综合建议（真实数据）。
 > - **行程监控**：顶部「实时查询」框可查真实航班 / 天气 / 突发信息；下方时间线、Plan B 与编排链为产品演示示意。
 > - **记忆中心**：长期记忆**持久化**在本机浏览器（localStorage），可手动增删/锁定，聊天中提取的偏好也会自动归入。
 > - **PRD**：静态产品文档，无外部数据。
@@ -27,7 +27,7 @@ open http://localhost:6001
 
 > 依赖 Node.js 18+（使用内置 fetch）。无需 Python。
 
-### 可选：配置携程问道 API Key
+### 可选：配置AI 助手 API Key
 
 不配置也能用（接口未鉴权时可用，但可能限流）。如需稳定服务，到
 [www.ctrip.com/wendao/openclaw](https://www.ctrip.com/wendao/openclaw) 申请 Key，二选一：
@@ -74,7 +74,7 @@ killall python3
 ```
 LvxingTuijianChat/
 ├── README.md                          # 说明文档
-├── server.js                          # Express：托管前端 + /api/ctrip 代理到携程问道
+├── server.js                          # Express：托管前端 + /api/ctrip 代理到AI 助手
 ├── package.json                       # 依赖与启动脚本
 ├── assets/
 │   └── demo-phases.gif                # 演示动图

@@ -64,7 +64,7 @@
               <div class="msg-avatar">🤖</div>
               <div class="msg-bubble">
                 <p>你好！我是您的 AI 差旅助手 <strong>CSTS TravelChat</strong> 🧳</p>
-                <p>在下方输入你的旅行想法，会由 <strong>携程问道</strong> 实时回答（酒店 / 机票 / 火车票 / 景点 / 玩乐）。试试告诉我你的旅行想法吧～</p>
+                <p>在下方输入你的旅行想法，会由 <strong>AI 助手</strong> 实时回答（酒店 / 机票 / 火车票 / 景点 / 玩乐）。试试告诉我你的旅行想法吧～</p>
               </div>
             </div>
             <div class="chat-msg ai">
@@ -110,7 +110,7 @@
     <section class="view" id="view-compare">
       <div class="page-header">
         <h2>⚖️ 方案对比决策</h2>
-        <p>输入两个目的地，由<strong>携程问道</strong>实时对比分析（真实数据）</p>
+        <p>输入两个目的地，由<strong>AI 助手</strong>实时对比分析（真实数据）</p>
       </div>
 
       <div class="compare-inputs">
@@ -141,8 +141,8 @@
       <div class="evidence-box">
         <h4>📋 数据说明</h4>
         <div class="ev-grid">
-          <div class="ev-item"><span>✈️</span> 对比内容由<strong>携程问道</strong>实时生成，覆盖预算 / 美食 / 风光 / 体验 / 适合人群等</div>
-          <div class="ev-item"><span>🔄</span> 每次点击「开始对比」都会重新向携程问道发起真实查询</div>
+          <div class="ev-item"><span>✈️</span> 对比内容由<strong>AI 助手</strong>实时生成，覆盖预算 / 美食 / 风光 / 体验 / 适合人群等</div>
+          <div class="ev-item"><span>🔄</span> 每次点击「开始对比」都会重新向AI 助手发起真实查询</div>
           <div class="ev-item"><span>🎯</span> 上方「侧重点」会注入到查询中，引导问道更关注你关心的维度</div>
         </div>
       </div>
@@ -155,12 +155,12 @@
         <p>天气 API 每15分钟轮询 · 航班状态实时跟踪 · 突发状况自动感知</p>
       </div>
 
-      <!-- 实时查询（真实携程问道） -->
+      <!-- 实时查询（真实AI 助手） -->
       <div class="live-query">
         <input type="text" id="monQuery" placeholder="实时查询：如「上海到东京 7月25日 航班」或「大理 天气」或「大理 暴雨 预警」" />
         <button class="btn primary" id="monQueryBtn">查询</button>
       </div>
-      <div class="live-result" id="monitorResult"><p class="muted">输入上述问题，由携程问道返回真实航班 / 天气 / 突发信息</p></div>
+      <div class="live-result" id="monitorResult"><p class="muted">输入上述问题，由AI 助手返回真实航班 / 天气 / 突发信息</p></div>
       <p class="demo-tag">以下时间线、Plan B 与编排链为<strong>产品演示</strong>示意，非真实监控数据。</p>
 
       <!-- Monitoring cards -->
@@ -239,13 +239,13 @@
             <div class="orch-chain" id="orchChain">
               <div class="och-step" data-step="1">
                 <div class="och-num">1</div>
-                <div class="och-body"><strong>取消户外课程场地</strong><span>携程MCP: cancel_booking · ¥0</span></div>
+                <div class="och-body"><strong>取消户外课程场地</strong><span>预订MCP: cancel_booking · ¥0</span></div>
                 <span class="och-status pending">等待</span>
               </div>
               <div class="och-join"><span>并行</span></div>
               <div class="och-step" data-step="2">
                 <div class="och-num">2</div>
-                <div class="och-body"><strong>预订大理州博物馆</strong><span>携程MCP: create_booking · ¥0</span></div>
+                <div class="och-body"><strong>预订大理州博物馆</strong><span>预订MCP: create_booking · ¥0</span></div>
                 <span class="och-status pending">等待</span>
               </div>
               <div class="och-join"><span>并行</span></div>
@@ -336,7 +336,7 @@
             <tbody>
               <tr>
                 <td rowspan="6" style="font-weight:700;color:var(--blue);">🔍<br/>直接竞品</td>
-                <td>携程「问道」</td><td>OTA 内 LLM 助手，探索式问题、景点查询</td><td>AI 不是替代搜索，而是补充复杂探索</td>
+                <td>OTA 问答助手</td><td>OTA 内 LLM 助手，探索式问题、景点查询</td><td>AI 不是替代搜索，而是补充复杂探索</td>
               </tr>
               <tr><td>Trip.com TripGen</td><td>OTA 内置 chatbot，目的地/行程/预订前咨询</td><td>参考"AI+交易平台"入口形态</td></tr>
               <tr><td>GuideGeek</td><td>WhatsApp/Instagram 旅行助手，人工审核防幻觉</td><td>CUI 轻入口、白标给 DMO、人工纠偏</td></tr>
@@ -371,7 +371,7 @@
             <li><strong>全链路整合</strong> — 灵感（类似 GuideGeek）→ 决策（类似 Google Travel Canvas）→ 记忆（向量数据库+治理）→ 执行（类似 Navan MCP 编排）→ 异常恢复（类似 AIRS + LLM）</li>
             <li><strong>可解释 Agent</strong> — 每次推荐标注数据来源(souce)+查询时间(fetched_at)+置信度+不确定性声明，类似 GuideGeek 的人工审核思路但用自动化实现</li>
             <li><strong>长记忆系统</strong> — 独立于 LLM 上下文窗口的向量记忆，跨行程复用，第45天记得第1天的偏好</li>
-            <li><strong>MCP 工具编排</strong> — 通过 MCP 协议标准化接入携程/飞猪/天气/航班/知识库等外部服务，Agent 按依赖关系自动编排调用链</li>
+            <li><strong>MCP 工具编排</strong> — 通过 MCP 协议标准化接入OTA 平台/天气/航班/知识库等外部服务，Agent 按依赖关系自动编排调用链</li>
             <li><strong>双通道风险感知</strong> — 系统主动监控（类似 FlightSense 预测）+ 用户手动上报，确保异常不遗漏</li>
           </ul>
         </div>
@@ -428,7 +428,7 @@
           <table class="prd-table">
             <thead><tr><th>优先级</th><th>功能</th><th>MVP</th><th>V1.1</th><th>V2</th><th>参考对象</th></tr></thead>
             <tbody>
-              <tr><td>P0</td><td>对话式行程规划+约束提取</td><td>✅</td><td>✅</td><td>✅</td><td>GuideGeek / 携程问道</td></tr>
+              <tr><td>P0</td><td>对话式行程规划+约束提取</td><td>✅</td><td>✅</td><td>✅</td><td>GuideGeek / AI 助手</td></tr>
               <tr><td>P0</td><td>多方案对比+权重调节</td><td>✅</td><td>✅</td><td>✅</td><td>Google Travel Canvas</td></tr>
               <tr><td>P0</td><td>突发事件感知+Plan B</td><td>✅</td><td>✅</td><td>✅</td><td>FlightSense / AIRS</td></tr>
               <tr><td>P1</td><td>长期/短期记忆管理</td><td>✅</td><td>✅</td><td>✅</td><td>自研向量记忆系统</td></tr>

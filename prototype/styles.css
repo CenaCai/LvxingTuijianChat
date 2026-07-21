@@ -963,7 +963,7 @@ a { color: var(--blue); text-decoration: none; }
   .ev-grid { grid-template-columns: 1fr; }
 }
 
-/* 携程问道来源标签 */
+/* AI 助手来源标签 */
 .ctrip-src {
   display: inline-block;
   font-size: 11px;
@@ -983,7 +983,7 @@ a { color: var(--blue); text-decoration: none; }
 .ctrip-src ~ table { width: 100%; border-collapse: collapse; margin: 6px 0; font-size: 12px; }
 .ctrip-src ~ th, .ctrip-src ~ td { border: 1px solid var(--line, #e5e7eb); padding: 4px 6px; text-align: left; }
 
-/* 方案对比 - 真实携程问道 */
+/* 方案对比 - 真实AI 助手 */
 .compare-inputs { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 16px; }
 .compare-inputs input {
   flex: 1; min-width: 160px; padding: 10px 14px; border: 1px solid var(--line, #e5e7eb);

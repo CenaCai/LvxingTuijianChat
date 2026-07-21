@@ -142,7 +142,7 @@ function sendMessage() {
 
   setTimeout(() => {
     remTyping(tid);
-    aiRespondReal(text);   // 真实调用携程问道；失败则回退到本地演示回复
+    aiRespondReal(text);   // 真实调用AI 助手；失败则回退到本地演示回复
     isTyping = false;
     sendBtn.disabled = false;
     setStatus('就绪');
@@ -199,14 +199,14 @@ function aiRespond(scene, text) {
 }
 
 // ============================================
-// Real backend: 携程问道 (TripAI) proxy
+// Real backend: AI 助手 proxy
 // ============================================
 async function aiRespondReal(text) {
   const html = await ctripHtml(text);
   if (html && html.indexOf('⚠️ 查询失败') === -1) {
     addMsg('ai', html);
   } else {
-    addMsg('ai', `<p>⚠️ 暂时连不上携程问道，已回退到本地演示回复。</p>`);
+    addMsg('ai', `<p>⚠️ 暂时连不上AI 助手，已回退到本地演示回复。</p>`);
     aiRespond(detect(text), text);   // 回退到原 canned 逻辑
   }
 }
@@ -272,7 +272,7 @@ function rEurope(text) {
 function rCompare() {
   addMsg('ai', `
     <p>好问题！让我并行查询两边数据...</p>
-    <p style="font-size:12px;color:var(--ink2);">🔧 同时调用：天气MCP · 携程航班MCP · Booking住宿MCP · 知识库RAG</p>
+    <p style="font-size:12px;color:var(--ink2);">🔧 同时调用：天气MCP · 航班MCP · Booking住宿MCP · 知识库RAG</p>
   `);
 
   addMsg('ai', `
@@ -340,8 +340,8 @@ function rEmergency() {
 // ============================================
 function rExecute() {
   const steps = [
-    {name:'取消户外课程场地',api:'携程MCP: cancel_booking',cost:'¥0'},
-    {name:'预订大理州博物馆',api:'携程MCP: create_booking',cost:'¥0'},
+    {name:'取消户外课程场地',api:'预订MCP: cancel_booking',cost:'¥0'},
+    {name:'预订大理州博物馆',api:'预订MCP: create_booking',cost:'¥0'},
     {name:'确认扎染工坊场地',api:'飞猪MCP: book_local',cost:'¥0'},
     {name:'通知学员+更新行程',api:'通知MCP: send_wechat',cost:'¥0.75'},
   ];
@@ -423,7 +423,7 @@ function rEvidence() {
     <p>📋 <strong>证据链</strong></p>
     <div class="bubble-card">
       <div class="bubble-card-row"><span class="l">🌤️ 天气</span><span class="v">OpenWeatherMap · 2026-07-15</span></div>
-      <div class="bubble-card-row"><span class="l">✈️ 机票</span><span class="v">携程API · ¥1,600-4,200</span></div>
+      <div class="bubble-card-row"><span class="l">✈️ 机票</span><span class="v">实时数据 · ¥1,600-4,200</span></div>
       <div class="bubble-card-row"><span class="l">🏨 住宿</span><span class="v">Booking · ¥150-350/晚</span></div>
       <div class="bubble-card-row"><span class="l">📚 课程</span><span class="v">知识库RAG · 4.6/5 (128条)</span></div>
     </div>
@@ -521,8 +521,8 @@ async function runCompare() {
 
   const focusTxt = [...cmpSelectedFocus].length ? '，侧重' + [...cmpSelectedFocus].join('、') : '';
   const qBase = `对比旅行目的地：${a} 和 ${b}。请从预算、美食、自然风光、体验、适合人群、大致费用区间等角度分析各自优劣${focusTxt}。`;
-  if (aEl) aEl.innerHTML = '<p class="loading">⏳ 正在向携程问道查询「' + esc(a) + '」…</p>';
-  if (bEl) bEl.innerHTML = '<p class="loading">⏳ 正在向携程问道查询「' + esc(b) + '」…</p>';
+  if (aEl) aEl.innerHTML = '<p class="loading">⏳ 正在向AI 助手查询「' + esc(a) + '」…</p>';
+  if (bEl) bEl.innerHTML = '<p class="loading">⏳ 正在向AI 助手查询「' + esc(b) + '」…</p>';
   if (sumEl) sumEl.innerHTML = '';
   setStatus('对比查询中...', true);
 
@@ -536,7 +536,7 @@ async function runCompare() {
   if (sumEl) {
     sumEl.innerHTML = '<p class="loading">⏳ 正在生成综合建议…</p>';
     const sum = await ctripHtml(`基于前面的对比，综合来看更推荐 ${a} 还是 ${b}？给出一句话结论和简要理由。`);
-    sumEl.innerHTML = `<div class="rec-label">🤖 携程问道 · 综合建议</div>` + (sum || '<p>无结果</p>');
+    sumEl.innerHTML = `<div class="rec-label">🤖 AI 助手 · 综合建议</div>` + (sum || '<p>无结果</p>');
   }
   setStatus('就绪');
   showToast('✅ 对比完成');
@@ -561,7 +561,7 @@ function initMonitor() {
   const go = async () => {
     const q = (input.value || '').trim();
     if (!q) { showToast('⚠️ 请输入查询内容'); return; }
-    out.innerHTML = '<p class="loading">⏳ 正在向携程问道查询「' + esc(q) + '」…</p>';
+    out.innerHTML = '<p class="loading">⏳ 正在向AI 助手查询「' + esc(q) + '」…</p>';
     setStatus('查询中...', true);
     const html = await ctripHtml(q);
     out.innerHTML = (html || '<p>无结果</p>');

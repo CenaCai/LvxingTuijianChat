@@ -2,7 +2,7 @@
   "name": "lvxingtuijianchat",
   "version": "0.1.0",
   "private": true,
-  "description": "旅行推荐 Chat — 前端原型 + 携程问道（TripAI）代理",
+  "description": "旅行推荐 Chat — 前端原型 + AI 助手代理",
   "scripts": {
     "start": "node server.js"
   },
