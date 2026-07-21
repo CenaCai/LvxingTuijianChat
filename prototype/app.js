@@ -54,6 +54,23 @@ function saveMemories() {
 }
 let extractedMemories = loadMemories();
 
+// 记忆分类：稳定偏好（跨行程可默认继承）vs 行程特定（每次新行程需确认）
+const STABLE_MEMORY_LABELS = new Set([
+  '饮食偏好', '出行节奏', '住宿偏好', '交通偏好', '出行同伴',
+  '兴趣主题', '忌讳/禁忌', '健康与体力', '语言偏好', '气候偏好', '购物偏好', '其他'
+]);
+const TRIP_MEMORY_LABELS = new Set([
+  '预算习惯', '行程时长', '总预算', '学习目标', '证件与签证'
+]);
+function classifyMemory(label) {
+  if (STABLE_MEMORY_LABELS.has(label)) return 'stable';
+  if (TRIP_MEMORY_LABELS.has(label)) return 'trip';
+  return 'stable'; // 未知标签默认安全侧：当作可继承偏好
+}
+
+// 用户在当前会话中已确认沿用的行程特定记忆标签
+const confirmedTripMemLabels = new Set();
+
 // ----- 行程状态（chat ↔ 行程监控 联动的单一数据源）-----
 const TRIP_KEY = 'travelmind_trip';
 function loadTrip() {
@@ -397,6 +414,42 @@ function extractPreferences(text) {
   return out;
 }
 
+// 判断用户输入是否信息不足：短句且未包含时长/预算/目的/明确确认
+function isUnderSpecified(text, entities) {
+  const t = (text || '').trim();
+  if (t.length >= 45) return false;
+  const entStr = entities.join(' ');
+  const hasDuration = /时长|天|日|周|个月/.test(entStr);
+  const hasBudget = /预算|元|万|钱/.test(t) || /元|万/.test(entStr);
+  const hasPurpose = /学习|游学|蜜月|亲子|度假|出差|摄影|徒步|美食|购物|放松/.test(t);
+  const isConfirm = /沿用|确认|就用|可以|好|要/.test(t) && (t.length < 25);
+  if (isConfirm) return false;            // 明确确认不算信息不足
+  return !hasDuration && !hasBudget && !hasPurpose;
+}
+
+// 构建当前轮次应注入的记忆上下文，并判断是否需要先澄清
+function buildMemoryContext(text, entities) {
+  const stable = [];
+  const trip = [];
+  extractedMemories.forEach(m => {
+    const cls = classifyMemory(m.label);
+    if (cls === 'trip') trip.push(m);
+    else stable.push(m);
+  });
+  const under = isUnderSpecified(text, entities);
+  const unconfirmedTrip = trip.filter(m => !confirmedTripMemLabels.has(m.label));
+  const needsClarification = under && unconfirmedTrip.length > 0;
+  return {
+    stable,
+    trip,
+    unconfirmedTrip,
+    // 行程特定记忆默认不自动沿用，必须用户在本会话确认后才注入
+    injectable: stable.concat(trip.filter(m => confirmedTripMemLabels.has(m.label))),
+    needsClarification,
+    underSpecified: under,
+  };
+}
+
 // ---- 阶段 2 展示用：抽取目的地/天数等实体（仅用于流程可视化）----
 function extractEntities(text) {
   const ents = [];
@@ -405,7 +458,7 @@ function extractEntities(text) {
   const from = text.match(/(?:从)?([\u4e00-\u9fa5]{2,6})(?:出发)/);
   if (from) ents.push('出发地: ' + from[1]);
   // 常见目的地关键词
-  const dest = text.match(/(清迈|曼谷|东京|大阪|京都|首尔|巴厘岛|新疆|云南|西藏|成都|重庆|三亚|厦门|大理|丽江|青海|甘肃|川西|北海道|冰岛|瑞士|新西兰|欧洲|日本|泰国|越南)/);
+  const dest = text.match(/(北京|清迈|曼谷|东京|大阪|京都|首尔|巴厘岛|新疆|云南|西藏|成都|重庆|三亚|厦门|大理|丽江|青海|甘肃|川西|北海道|冰岛|瑞士|新西兰|欧洲|日本|泰国|越南)/);
   if (dest) ents.push('目的地: ' + dest[1]);
   return ents;
 }
@@ -443,24 +496,43 @@ async function aiRespondReal(text) {
   setStage(1, 'done');
   setDetail(`<div class="stage-detail"><span class="sd-tag">意图</span>${sceneName}${entities.length ? ' · ' + entities.map(e => `<code>${esc(e)}</code>`).join(' ') : ''}</div>`);
 
-  // ③ 记忆检索 + 写入
+  // ③ 记忆检索 + 写入 + 相关性校验
   setStage(2, 'active'); await sleep(300);
   const before = extractedMemories.map(m => m.label + '=' + m.value);
   if (prefs.length) addMemories(prefs);
   const added = prefs.filter(p => !before.includes(p.label + '=' + p.value));
-  const hitMem = extractedMemories.slice(0, 4).map(m => `${m.label}: ${m.value}`);
+  const memCtx = buildMemoryContext(text, entities);
   setStage(2, 'done');
-  let memDetail = `<div class="stage-detail"><span class="sd-tag sd-mem">记忆命中 ${extractedMemories.length}</span>` +
-    hitMem.map(m => `<code>${esc(m)}</code>`).join(' ') + '</div>';
+
+  // 阶段明细：稳定偏好 + 历史行程设定（区分是否沿用）
+  let memDetail = `<div class="stage-detail"><span class="sd-tag sd-mem">记忆命中 ${extractedMemories.length}</span>`;
+  if (memCtx.stable.length) {
+    memDetail += `<span class="sd-sub">已注入 ${memCtx.stable.length} 条稳定偏好</span>` +
+      memCtx.stable.slice(0, 3).map(m => `<code>${esc(m.label + ': ' + m.value)}</code>`).join(' ');
+  }
+  if (memCtx.unconfirmedTrip.length) {
+    memDetail += `<span class="sd-sub">${memCtx.unconfirmedTrip.length} 条历史行程设定待确认</span>` +
+      memCtx.unconfirmedTrip.slice(0, 3).map(m => `<code>${esc(m.label + ': ' + m.value)}</code>`).join(' ');
+  }
+  memDetail += '</div>';
   if (added.length) memDetail += `<div class="stage-detail"><span class="sd-tag sd-new">新增记忆 ${added.length}</span>` +
     added.map(m => `<code>${esc(m.label + ': ' + m.value)}</code>`).join(' ') + '</div>';
   setDetail((stageWrap._detail || '') + memDetail);
 
-  // ④ 工具调用：把记忆注入 prompt，调用真实 AI 知识引擎
+  // 若输入过短且存在未确认的行程特定记忆，先澄清而非直接调用 AI
+  if (memCtx.needsClarification) {
+    setStage(3, 'pending');
+    setStage(4, 'pending');
+    setStage(5, 'pending');
+    renderClarificationCard(text, memCtx.unconfirmedTrip, stageWrap);
+    return;
+  }
+
+  // ④ 工具调用：仅注入已确认/稳定的记忆，调用真实 AI 知识引擎
   setStage(3, 'active');
-  const memCtx = extractedMemories.slice(0, 6).map(m => `${m.label}:${m.value}`).join('；');
-  const augmented = memCtx
-    ? `${text}\n\n【用户长期偏好，请在建议中优先考虑】${memCtx}`
+  const memStr = memCtx.injectable.slice(0, 6).map(m => `${m.label}:${m.value}`).join('；');
+  const augmented = memStr
+    ? `${text}\n\n【用户长期偏好，请在建议中优先考虑】${memStr}`
     : text;
   const html = await ctripHtml(augmented);
   const ok = html && html.indexOf('⚠️ 查询失败') === -1;
@@ -489,6 +561,52 @@ async function aiRespondReal(text) {
     addMsg('ai', `<p>⚠️ 暂时连不上 AI 知识引擎，已回退到本地演示回复。</p>`);
     aiRespond(scene === 'route' || scene === 'guide' ? 'general' : scene, text);
   }
+}
+
+// 当输入过短且命中历史行程特定记忆时，弹出澄清卡片让用户确认是否沿用
+function renderClarificationCard(originalText, tripMems, stageWrap) {
+  const items = tripMems.map(m => `<div class="clar-item"><span class="clar-label">${esc(m.label)}</span><span class="clar-value">${esc(m.value)}</span></div>`).join('');
+  const summary = tripMems.map(m => `${m.label}:${m.value}`).join('；');
+  const id = 'clarify-' + Date.now();
+  const card = document.createElement('div');
+  card.className = 'clarify-card';
+  card.id = id;
+  card.innerHTML = `
+    <div class="clarify-title">🧠 检测到历史行程设定</div>
+    <p class="clarify-desc">你只说了「${esc(originalText)}」，但我之前记录过这些行程特定信息。它们对本次北京之行是否仍然适用？</p>
+    <div class="clarify-list">${items}</div>
+    <div class="clarify-actions">
+      <button class="btn btn-primary clar-confirm">✅ 沿用这些设定</button>
+      <button class="btn clar-reject">🔄 重新设定</button>
+    </div>
+    <p class="clarify-tip">选择“重新设定”后，我会忽略以上设定，仅基于你的通用偏好和本次输入来建议。</p>
+  `;
+  stageWrap.appendChild(card);
+  scrollChat();
+
+  card.querySelector('.clar-confirm').addEventListener('click', () => {
+    tripMems.forEach(m => confirmedTripMemLabels.add(m.label));
+    card.remove();
+    addMsg('user', '<p>沿用这些设定</p>');
+    sendAsUserConfirm(originalText, summary);
+  });
+  card.querySelector('.clar-reject').addEventListener('click', () => {
+    card.remove();
+    addMsg('user', '<p>重新设定</p>');
+    sendAsUserReject(originalText);
+  });
+}
+
+// 确认沿用：把行程特定记忆拼回 prompt，重新走完整 6 阶段
+function sendAsUserConfirm(originalText, summary) {
+  const tid = addTyping();
+  setTimeout(() => { remTyping(tid); aiRespondReal(originalText + '\n\n（本次行程沿用：' + summary + '）'); }, 400);
+}
+
+// 拒绝沿用：用户已明确排除旧设定，直接按当前输入生成
+function sendAsUserReject(originalText) {
+  const tid = addTyping();
+  setTimeout(() => { remTyping(tid); aiRespondReal(originalText); }, 400);
 }
 
 // ============================================
