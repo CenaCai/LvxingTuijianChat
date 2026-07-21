@@ -71,6 +71,8 @@ function classifyMemory(label) {
 
 // 用户在当前会话中已确认沿用的行程特定记忆标签
 const confirmedTripMemLabels = new Set();
+// 用户点击「重新设定」后排除的行程特定记忆标签（不再显示为待确认）
+const rejectedTripMemLabels = new Set();
 
 // ----- 行程状态（chat ↔ 行程监控 联动的单一数据源）-----
 const TRIP_KEY = 'travelmind_trip';
@@ -442,14 +444,16 @@ function buildMemoryContext(text, entities) {
     else stable.push(m);
   });
   const under = isUnderSpecified(text, entities);
-  const unconfirmedTrip = trip.filter(m => !confirmedTripMemLabels.has(m.label));
+  // 用户已排除的行程记忆不再参与本次澄清与展示
+  const activeTrip = trip.filter(m => !rejectedTripMemLabels.has(m.label));
+  const unconfirmedTrip = activeTrip.filter(m => !confirmedTripMemLabels.has(m.label));
   const needsClarification = under && unconfirmedTrip.length > 0;
   return {
     stable,
-    trip,
+    trip: activeTrip,
     unconfirmedTrip,
     // 行程特定记忆默认不自动沿用，必须用户在本会话确认后才注入
-    injectable: stable.concat(trip.filter(m => confirmedTripMemLabels.has(m.label))),
+    injectable: stable.concat(activeTrip.filter(m => confirmedTripMemLabels.has(m.label))),
     needsClarification,
     underSpecified: under,
   };
@@ -475,7 +479,9 @@ function extractClarifyDays(text) {
 }
 function extractClarifyBudget(text) {
   const t = (text || '').toLowerCase();
-  const m = t.match(/(?:预算|大概|大约|准备|花)?\s*([0-9]{1,6}(?:\.[0-9]+)?)\s*(?:万|千|k|w)?\s*(?:元|块|rmb|¥)?(?:\s*(?:左右|大概|以内|上下))?/);
+  // 必须出现预算关键词 或 货币单位，避免把「5天」解析成「5元」
+  const m = t.match(/(?:预算|大概|大约|准备|花|要|用)\s*([0-9]{1,6}(?:\.[0-9]+)?)(?:\s*(?:万|千|k|w|元|块|rmb|¥))?(?:\s*(?:左右|以内|上下))?/) ||
+            t.match(/([0-9]{1,6}(?:\.[0-9]+)?)\s*(?:万|千|k|w|元|块|rmb|¥)(?:\s*(?:左右|以内|上下))?/);
   if (m) {
     let n = parseFloat(m[1]);
     if (/万/.test(t)) n *= 10000;
@@ -514,7 +520,11 @@ function handleClarifyReply(text) {
   if (purpose && !c.purpose) c.purpose = purpose;
   if (budget && !c.budget) c.budget = budget;
   if (prefs.length) {
-    addMemories(prefs);
+    // 稳定偏好（饮食/节奏/同伴等）写入长期记忆；预算/时长等行程特定信息只用于本次 query，不落盘
+    const stablePrefs = prefs.filter(p => classifyMemory(p.label) === 'stable');
+    if (stablePrefs.length) addMemories(stablePrefs);
+    const budgetPref = prefs.find(p => p.label === '预算习惯');
+    if (budgetPref && !c.budget) c.budget = budgetPref.value;
     c.notes = prefs.map(p => p.label + '：' + p.value).join('；');
   }
   if (c.days && c.purpose && c.budget) {
@@ -670,7 +680,7 @@ function renderClarificationCard(originalText, tripMems, stageWrap) {
   card.querySelector('.clar-reject').addEventListener('click', () => {
     card.remove();
     addMsg('user', '<p>重新设定</p>');
-    sendAsUserReject(originalText);
+    sendAsUserReject(originalText, tripMems);
   });
 }
 
@@ -681,8 +691,11 @@ function sendAsUserConfirm(originalText, summary) {
   setTimeout(() => { remTyping(tid); aiRespondReal(originalText + '\n\n（本次行程沿用：' + summary + '）'); }, 400);
 }
 
-// 拒绝沿用：进入聊天式澄清追问，让用户逐步补充本次行程信息
-function sendAsUserReject(originalText) {
+// 拒绝沿用：把当前行程特定记忆标记为已排除，进入聊天式澄清追问
+function sendAsUserReject(originalText, tripMems) {
+  if (tripMems && tripMems.length) {
+    tripMems.forEach(m => rejectedTripMemLabels.add(m.label));
+  }
   clarifyState = {
     active: true,
     dest: (tripState && tripState.dest) || '',
