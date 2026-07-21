@@ -1048,3 +1048,57 @@ a { color: var(--blue); text-decoration: none; }
 .mem-list .mem-row { display: flex; align-items: center; gap: 10px; background: var(--bg-card, #fff); border: 1px solid var(--line, #e5e7eb); border-radius: 10px; padding: 10px 12px; }
 .mem-list .mem-row > div { flex: 1; }
 .mem-hint { font-size: 12px; margin-top: 10px; }
+
+/* ===== 6 阶段 Agent 流水线进度条（AI 对话气泡内）===== */
+.stage-stepper {
+  display: flex; align-items: stretch; flex-wrap: wrap; gap: 2px;
+  padding: 4px 2px; margin: -2px 0 2px;
+}
+.stage-step {
+  display: flex; align-items: center; gap: 6px;
+  padding: 5px 8px; border-radius: 8px;
+  background: var(--bg-soft, #f3f4f6); border: 1px solid var(--line, #e5e7eb);
+  opacity: .5; transition: all .25s ease; min-width: 0;
+}
+.stage-step .stage-ico {
+  width: 22px; height: 22px; flex: 0 0 22px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 12px; background: #fff; border: 1px solid var(--line, #e5e7eb);
+}
+.stage-meta { line-height: 1.15; min-width: 0; }
+.stage-name { font-size: 11px; font-weight: 700; color: var(--ink, #1f2937); white-space: nowrap; }
+.stage-hint { font-size: 10px; color: var(--muted, #94a3b8); white-space: nowrap; }
+.stage-arrow { display: flex; align-items: center; color: var(--muted, #cbd5e1); font-size: 14px; }
+.stage-step.active {
+  opacity: 1; border-color: var(--blue, #2f8fff);
+  background: rgba(47, 143, 255, .08);
+  box-shadow: 0 0 0 2px rgba(47, 143, 255, .12);
+}
+.stage-step.active .stage-ico {
+  border-color: var(--blue, #2f8fff); color: var(--blue, #2f8fff);
+  animation: stagePulse 1s ease-in-out infinite;
+}
+.stage-step.done { opacity: 1; }
+.stage-step.done .stage-ico { background: #16a34a; color: #fff; border-color: #16a34a; }
+@keyframes stagePulse { 0%,100% { transform: scale(1); } 50% { transform: scale(1.12); } }
+
+.stage-detail {
+  font-size: 11px; color: var(--ink-soft, #475569); margin: 4px 0 0;
+  display: flex; align-items: center; flex-wrap: wrap; gap: 4px; line-height: 1.6;
+}
+.stage-detail code {
+  background: var(--bg-soft, #f1f5f9); border: 1px solid var(--line, #e5e7eb);
+  border-radius: 5px; padding: 1px 6px; font-size: 10.5px; color: var(--ink, #334155);
+}
+.sd-tag {
+  font-weight: 700; font-size: 10px; padding: 1px 7px; border-radius: 999px;
+  background: #e0edff; color: #1d5fd6;
+}
+.sd-tag.sd-mem { background: #fef3c7; color: #b45309; }
+.sd-tag.sd-new { background: #dcfce7; color: #15803d; }
+
+.mem-noted {
+  margin-top: 10px; padding: 8px 12px; font-size: 12.5px; line-height: 1.6;
+  background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; color: #15803d;
+}
+.mem-noted b { color: #166534; }

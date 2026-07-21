@@ -216,15 +216,180 @@ function aiRespond(scene, text) {
 }
 
 // ============================================
-// Real backend: AI 助手 proxy
+// Real backend: 6 阶段 Agent 流水线（对应 PRD 3.1）
+// ①用户输入 → ②意图识别 → ③记忆检索 → ④工具调用 → ⑤聚合校验 → ⑥结构化输出
 // ============================================
+// (sleep 工具函数已在文件后段声明，运行时可用)
+
+// 6 阶段定义（与 system-flow.html 流水线严格对应）
+const STAGE_DEFS = [
+  { icon: '👤', name: '用户输入', hint: '自然语言 / 上下文' },
+  { icon: '🔍', name: '意图识别', hint: '实体提取 + 分类' },
+  { icon: '🧠', name: '记忆检索', hint: '长短期记忆融合' },
+  { icon: '🔧', name: '工具调用', hint: 'AI 知识引擎' },
+  { icon: '📊', name: '聚合校验', hint: '约束匹配 + 标注' },
+  { icon: '💬', name: '结构化输出', hint: '生成回复' },
+];
+
+// ---- 阶段 2 核心：从自然语言中提取差旅偏好，映射到 MEM_TAGS ----
+function extractPreferences(text) {
+  const t = (text || '').toLowerCase();
+  const out = [];
+  const push = (label, value) => {
+    if (!value) return;
+    if (!out.find(o => o.label === label)) out.push({ label, value, locked: false });
+  };
+
+  // 饮食偏好
+  if (/不吃辣|不能吃辣|怕辣|少辣|微辣|清淡/.test(t)) push('饮食偏好', '少辣、清淡为主');
+  else if (/无辣不欢|重口|爱吃辣|嗜辣/.test(t)) push('饮食偏好', '偏爱重口/辣');
+  if (/素食|吃素|不吃肉/.test(t)) push('饮食偏好', '素食');
+  const jikou = t.match(/不吃([\u4e00-\u9fa5]{1,6})/);
+  if (jikou && !/辣|肉/.test(jikou[1])) push('忌讳/禁忌', '不吃' + jikou[1]);
+
+  // 预算习惯
+  const budget = text.match(/(?:预算|人均|每天|每人|日均)?\s*([0-9]{2,5})\s*(?:元|块|rmb|¥)?\s*(?:\/|每)?\s*(天|日|晚|人|夜)/i);
+  if (budget) push('预算习惯', budget[1] + '元/' + budget[2]);
+  else if (/穷游|省钱|预算有限|便宜/.test(t)) push('预算习惯', '经济型/省钱优先');
+  else if (/不差钱|高端|奢华|豪华/.test(t)) push('预算习惯', '高端/品质优先');
+
+  // 出行节奏
+  if (/慢节奏|不赶路|悠闲|放松|深度游|躺平/.test(t)) push('出行节奏', '慢节奏、不赶路');
+  else if (/特种兵|暴走|紧凑|赶路|打卡|多刷/.test(t)) push('出行节奏', '紧凑、多点打卡');
+
+  // 住宿偏好
+  if (/民宿/.test(t)) push('住宿偏好', '偏好民宿');
+  else if (/青旅|青年旅舍|hostel/.test(t)) push('住宿偏好', '青旅/经济住宿');
+  else if (/五星|豪华酒店|高档酒店/.test(t)) push('住宿偏好', '五星/高档酒店');
+  else if (/精品酒店|设计酒店/.test(t)) push('住宿偏好', '精品/设计酒店');
+  const stay = text.match(/([0-9]{3,5})\s*(?:元|块)?\s*\/?\s*晚/);
+  if (stay) push('住宿偏好', stay[1] + '元/晚');
+
+  // 交通偏好
+  if (/自驾/.test(t)) push('交通偏好', '自驾');
+  else if (/高铁|动车/.test(t)) push('交通偏好', '偏好高铁');
+  else if (/不坐飞机|不飞|怕坐飞机/.test(t)) push('交通偏好', '不坐飞机');
+  else if (/飞机|航班/.test(t)) push('交通偏好', '接受飞机');
+
+  // 出行同伴
+  if (/带娃|带孩子|亲子|带小孩|一家|全家/.test(t)) push('出行同伴', '亲子/带娃');
+  else if (/带父母|带老人|带爸妈/.test(t)) push('出行同伴', '带父母/老人');
+  else if (/情侣|蜜月|二人|和对象/.test(t)) push('出行同伴', '情侣/二人');
+  else if (/独自|一个人|独游|单人/.test(t)) push('出行同伴', '独自出行');
+  else if (/朋友|闺蜜|同学/.test(t)) push('出行同伴', '朋友结伴');
+
+  // 兴趣主题
+  const themes = [];
+  if (/美食|吃货|探店/.test(t)) themes.push('美食');
+  if (/自然|风光|山水|海岛|草原|雪山/.test(t)) themes.push('自然风光');
+  if (/人文|历史|古迹|博物馆|文化/.test(t)) themes.push('人文历史');
+  if (/摄影|拍照|出片/.test(t)) themes.push('摄影');
+  if (/徒步|登山|户外|hiking/.test(t)) themes.push('徒步户外');
+  if (/温泉/.test(t)) themes.push('温泉');
+  if (themes.length) push('兴趣主题', themes.join('、'));
+
+  // 忌讳/禁忌 & 健康体力
+  if (/晕车/.test(t)) push('忌讳/禁忌', '易晕车');
+  if (/晕船/.test(t)) push('忌讳/禁忌', '易晕船');
+  if (/走不动|体力有限|腿脚不便|走路多了不行/.test(t)) push('健康与体力', '体力有限、避免长距离步行');
+  if (/高反|高原反应/.test(t)) push('健康与体力', '注意高原反应');
+
+  // 气候偏好
+  if (/怕冷|喜欢温暖|想去暖和|避寒/.test(t)) push('气候偏好', '偏好温暖');
+  else if (/怕热|避暑|喜欢凉爽/.test(t)) push('气候偏好', '偏好凉爽/避暑');
+
+  // 购物偏好
+  if (/购物|免税|买买买|扫货|奥莱/.test(t)) push('购物偏好', '重视购物/免税');
+
+  return out;
+}
+
+// ---- 阶段 2 展示用：抽取目的地/天数等实体（仅用于流程可视化）----
+function extractEntities(text) {
+  const ents = [];
+  const days = text.match(/([0-9一二两三四五六七八九十]{1,3})\s*(天|日|周|个月)/);
+  if (days) ents.push('时长: ' + days[0]);
+  const from = text.match(/(?:从)?([\u4e00-\u9fa5]{2,6})(?:出发)/);
+  if (from) ents.push('出发地: ' + from[1]);
+  // 常见目的地关键词
+  const dest = text.match(/(清迈|曼谷|东京|大阪|京都|首尔|巴厘岛|新疆|云南|西藏|成都|重庆|三亚|厦门|大理|丽江|青海|甘肃|川西|北海道|冰岛|瑞士|新西兰|欧洲|日本|泰国|越南)/);
+  if (dest) ents.push('目的地: ' + dest[1]);
+  return ents;
+}
+
+// ---- 阶段进度条渲染 ----
+function stepperHtml(states) {
+  const steps = STAGE_DEFS.map((s, i) => {
+    const st = states[i] || 'pending';
+    return `<div class="stage-step ${st}">
+      <div class="stage-ico">${st === 'done' ? '✓' : s.icon}</div>
+      <div class="stage-meta"><div class="stage-name">${i + 1}. ${s.name}</div>
+      <div class="stage-hint">${s.hint}</div></div></div>`;
+  }).join('<div class="stage-arrow">›</div>');
+  return `<div class="stage-stepper">${steps}</div>`;
+}
+
 async function aiRespondReal(text) {
-  const html = await ctripHtml(text);
-  if (html && html.indexOf('⚠️ 查询失败') === -1) {
-    addMsg('ai', html);
+  // 阶段状态：pending / active / done
+  const states = ['pending', 'pending', 'pending', 'pending', 'pending', 'pending'];
+  const bubble = addMsg('ai', stepperHtml(states));
+  const stageWrap = bubble.querySelector('.msg-bubble');
+  const setStage = (i, st) => { states[i] = st; stageWrap.innerHTML = stepperHtml(states) + (stageWrap._detail || ''); scrollChat(); };
+  const setDetail = (h) => { stageWrap._detail = h; stageWrap.innerHTML = stepperHtml(states) + h; scrollChat(); };
+
+  // ① 用户输入
+  setStage(0, 'active'); await sleep(220); setStage(0, 'done');
+
+  // ② 意图识别：分类 + 实体 + 偏好抽取
+  setStage(1, 'active'); await sleep(280);
+  const scene = detect(text);
+  const sceneName = ({ europe: '知识问答', compare: '方案对比', emergency: '突发应对', budget: '预算规划', route: '路线交通', guide: '攻略推荐', memory: '偏好管理', general: '通用咨询' })[scene] || '通用咨询';
+  const entities = extractEntities(text);
+  const prefs = extractPreferences(text);
+  setStage(1, 'done');
+  setDetail(`<div class="stage-detail"><span class="sd-tag">意图</span>${sceneName}${entities.length ? ' · ' + entities.map(e => `<code>${esc(e)}</code>`).join(' ') : ''}</div>`);
+
+  // ③ 记忆检索 + 写入
+  setStage(2, 'active'); await sleep(300);
+  const before = extractedMemories.map(m => m.label + '=' + m.value);
+  if (prefs.length) addMemories(prefs);
+  const added = prefs.filter(p => !before.includes(p.label + '=' + p.value));
+  const hitMem = extractedMemories.slice(0, 4).map(m => `${m.label}: ${m.value}`);
+  setStage(2, 'done');
+  let memDetail = `<div class="stage-detail"><span class="sd-tag sd-mem">记忆命中 ${extractedMemories.length}</span>` +
+    hitMem.map(m => `<code>${esc(m)}</code>`).join(' ') + '</div>';
+  if (added.length) memDetail += `<div class="stage-detail"><span class="sd-tag sd-new">新增记忆 ${added.length}</span>` +
+    added.map(m => `<code>${esc(m.label + ': ' + m.value)}</code>`).join(' ') + '</div>';
+  setDetail((stageWrap._detail || '') + memDetail);
+
+  // ④ 工具调用：把记忆注入 prompt，调用真实 AI 知识引擎
+  setStage(3, 'active');
+  const memCtx = extractedMemories.slice(0, 6).map(m => `${m.label}:${m.value}`).join('；');
+  const augmented = memCtx
+    ? `${text}\n\n【用户长期偏好，请在建议中优先考虑】${memCtx}`
+    : text;
+  const html = await ctripHtml(augmented);
+  const ok = html && html.indexOf('⚠️ 查询失败') === -1;
+  setStage(3, ok ? 'done' : 'pending');
+
+  // ⑤ 聚合校验
+  setStage(4, 'active'); await sleep(260); setStage(4, ok ? 'done' : 'pending');
+
+  // ⑥ 结构化输出
+  setStage(5, 'active'); await sleep(200); setStage(5, 'done');
+  await sleep(150);
+
+  if (ok) {
+    // 折叠流程条，输出正式回复
+    let answer = html;
+    if (added.length) {
+      answer += `<div class="mem-noted">🧠 已记住 ${added.length} 条偏好：` +
+        added.map(m => `<b>${esc(m.value)}</b>`).join('、') + '，后续会自动带入建议。</div>';
+    }
+    addMsg('ai', answer);
   } else {
-    addMsg('ai', `<p>⚠️ 暂时连不上 AI 助手，已回退到本地演示回复。</p>`);
-    aiRespond(detect(text), text);   // 回退到原 canned 逻辑
+    addMsg('ai', `<p>⚠️ 暂时连不上 AI 知识引擎，已回退到本地演示回复。</p>`);
+    aiRespond(scene === 'route' || scene === 'guide' ? 'general' : scene, text);
   }
 }
 
