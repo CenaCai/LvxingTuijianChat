@@ -479,18 +479,33 @@ function extractClarifyDays(text) {
 }
 function extractClarifyBudget(text) {
   const t = (text || '').toLowerCase();
-  // 必须出现预算关键词 或 货币单位，避免把「5天」解析成「5元」
-  const m = t.match(/(?:预算|大概|大约|准备|花|要|用)\s*([0-9]{1,6}(?:\.[0-9]+)?)(?:\s*(?:万|千|k|w|元|块|rmb|¥))?(?:\s*(?:左右|以内|上下))?/) ||
-            t.match(/([0-9]{1,6}(?:\.[0-9]+)?)\s*(?:万|千|k|w|元|块|rmb|¥)(?:\s*(?:左右|以内|上下))?/);
-  if (m) {
-    let n = parseFloat(m[1]);
-    if (/万/.test(t)) n *= 10000;
-    else if (/千/.test(t) || /k/.test(t)) n *= 1000;
-    return fmtYuan(n);
+  // 识别「每天/每人/每晚」等按单位表述，保留 /天 语义
+  const perUnit = /每\s*天|每日|每晚|每人|人均|\/\s*天|\/\s*人|\/\s*晚/.test(t);
+
+  // 1) 关键词前缀：预算5000、每天1000、大概1万
+  const m1 = t.match(/(?:预算|大概|大约|准备|花|要|用|每天|每日|人均|每晚)\s*([0-9]{1,6}(?:\.[0-9]+)?)(?:\s*(?:万|千|k|w|元|块|rmb|¥))?(?:\s*(?:左右|以内|上下))?/);
+  // 2) 纯货币单位：5000元、1万、300块
+  const m2 = t.match(/([0-9]{1,6}(?:\.[0-9]+)?)\s*(?:万|千|k|w|元|块|rmb|¥)(?:\s*(?:左右|以内|上下))?/);
+  // 3) 每单位形式：1000/天、1000元/天、1000每天、1000一天
+  const m3 = t.match(/([0-9]{1,6}(?:\.[0-9]+)?)\s*(?:元|块|rmb|¥)?\s*(?:\/|每|一)\s*(天|日|晚|人|夜)(?:\s*(?:左右|以内|上下))?/);
+
+  let raw = '', suffix = '';
+  if (m3) {
+    raw = m3[1];
+    suffix = '/' + m3[2];
+  } else if (m1 || m2) {
+    raw = (m1 || m2)[1];
+    if (perUnit) suffix = '/天';
   }
-  if (/穷游|省钱|便宜|经济|低预算/.test(t)) return '经济型/省钱优先';
-  if (/不差钱|高端|豪华|奢华|上限高|品质/.test(t)) return '高端/品质优先';
-  return '';
+  if (!raw) {
+    if (/穷游|省钱|便宜|经济|低预算/.test(t)) return '经济型/省钱优先';
+    if (/不差钱|高端|豪华|奢华|上限高|品质/.test(t)) return '高端/品质优先';
+    return '';
+  }
+  let n = parseFloat(raw);
+  if (/万/.test(t)) n *= 10000;
+  else if (/千/.test(t) || /k/.test(t)) n *= 1000;
+  return fmtYuan(n) + suffix;
 }
 function buildClarifyQuestion(collected, dest) {
   const known = [];
