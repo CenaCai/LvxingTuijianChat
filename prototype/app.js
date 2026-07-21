@@ -54,12 +54,103 @@ function saveMemories() {
 }
 let extractedMemories = loadMemories();
 
+// ----- 行程状态（chat ↔ 行程监控 联动的单一数据源）-----
+const TRIP_KEY = 'travelmind_trip';
+function loadTrip() {
+  try {
+    const raw = localStorage.getItem(TRIP_KEY);
+    return raw ? JSON.parse(raw) : null;
+  } catch { return null; }
+}
+function saveTrip() {
+  try { localStorage.setItem(TRIP_KEY, JSON.stringify(tripState)); } catch {}
+}
+let tripState = loadTrip();
+
+// 中文数字 → 阿拉伯数字（用于「五天」「十五天」等）
+function cn2num(s) {
+  if (/^\d+$/.test(s)) return parseInt(s, 10);
+  const map = { 一:1,二:2,两:2,三:3,四:4,五:5,六:6,七:7,八:8,九:9,十:10 };
+  if (s === '十') return 10;
+  if (s.length === 1) return map[s] || 0;
+  // 十X / X十 / X十X
+  if (s[0] === '十') return 10 + (map[s[1]] || 0);
+  if (s[s.length - 1] === '十') return (map[s[0]] || 0) * 10;
+  if (s.includes('十')) { const [a, b] = s.split('十'); return (map[a] || 0) * 10 + (map[b] || 0); }
+  return map[s] || 0;
+}
+
+// 从用户输入解析行程要素（目的地/天数/出发地），有更新则写入 tripState
+function updateTripFromInput(text) {
+  const t = text || '';
+  let changed = false;
+  const trip = tripState || { dest: '', days: 0, from: '', updatedAt: 0 };
+
+  // 天数：支持「5天」「十五天」「2周」「一个月」
+  const dm = t.match(/([0-9]{1,3}|[一二两三四五六七八九十]{1,3})\s*(天|日|周|个月)/);
+  if (dm) {
+    let n = cn2num(dm[1]);
+    if (dm[2] === '周') n *= 7;
+    else if (dm[2] === '个月') n *= 30;
+    if (n > 0 && n <= 365 && n !== trip.days) { trip.days = n; changed = true; }
+  }
+
+  // 目的地关键词
+  const dest = t.match(/(清迈|曼谷|普吉|东京|大阪|京都|北海道|首尔|济州|巴厘岛|新加坡|新疆|云南|西藏|成都|重庆|三亚|厦门|大理|丽江|香格里拉|青海|甘肃|川西|稻城|冰岛|瑞士|新西兰|欧洲|日本|泰国|越南|摩洛哥)/);
+  if (dest && dest[1] !== trip.dest) { trip.dest = dest[1]; changed = true; }
+
+  // 出发地
+  const from = t.match(/(?:从)?([\u4e00-\u9fa5]{2,6})(?:出发)/);
+  if (from && from[1] !== trip.from) { trip.from = from[1]; changed = true; }
+
+  if (changed) {
+    trip.updatedAt = Date.now();
+    tripState = trip;
+    saveTrip();
+  }
+  return changed;
+}
+
+// 依据目的地 + 天数动态切分行程时间线阶段（保证区间连续递增、不重叠）
+function buildTimelinePhases(dest, days) {
+  const d = dest || '目的地';
+  days = (days && days > 0) ? days : 5;
+  if (days === 1) return [{ day: 'Day 1', text: `${d}一日游 + 返程` }];
+  if (days === 2) return [
+    { day: 'Day 1', text: `抵达${d}，入住 + 城区游览` },
+    { day: 'Day 2', text: `${d}核心景点 + 返程` },
+  ];
+  // days >= 3：Day1 抵达 + 末日返程 + 中间均分成若干段
+  const midLabels = [
+    `${d}城区 + 经典地标探索`,
+    `${d}周边 / 自然人文深度体验`,
+    `主题活动 + 自由行`,
+    `${d}小众探索 + 美食`,
+  ];
+  const phases = [{ day: 'Day 1', text: `抵达${d}，酒店已确认` }];
+  const midStart = 2, midEnd = days - 1;
+  const midTotal = midEnd - midStart + 1;
+  const segCount = Math.min(midLabels.length, midTotal,
+    days <= 4 ? 1 : days <= 7 ? 2 : days <= 11 ? 3 : 4);
+  let cursor = midStart;
+  for (let i = 0; i < segCount; i++) {
+    const remainDays = midEnd - cursor + 1;
+    const take = Math.ceil(remainDays / (segCount - i));
+    const s = cursor, e = cursor + take - 1;
+    phases.push({ day: s === e ? `Day ${s}` : `Day ${s}-${e}`, text: midLabels[i] });
+    cursor = e + 1;
+  }
+  phases.push({ day: `Day ${days}`, text: `返程 · 行程收官` });
+  return phases;
+}
+
 // ============================================
 // View switching
 // ============================================
 function switchView(id) {
   views.forEach(v => v.classList.toggle('is-visible', v.id === `view-${id}`));
   navItems.forEach(n => n.classList.toggle('is-active', n.dataset.view === id));
+  if (id === 'monitor') renderMonitorTrip();   // 切到行程监控时按最新 chat 行程刷新
 }
 
 navItems.forEach(n => n.addEventListener('click', () => switchView(n.dataset.view)));
@@ -346,6 +437,7 @@ async function aiRespondReal(text) {
   const sceneName = ({ europe: '知识问答', compare: '方案对比', emergency: '突发应对', budget: '预算规划', route: '路线交通', guide: '攻略推荐', memory: '偏好管理', general: '通用咨询' })[scene] || '通用咨询';
   const entities = extractEntities(text);
   const prefs = extractPreferences(text);
+  const tripChanged = updateTripFromInput(text);   // 解析目的地/天数 → 行程监控联动
   setStage(1, 'done');
   setDetail(`<div class="stage-detail"><span class="sd-tag">意图</span>${sceneName}${entities.length ? ' · ' + entities.map(e => `<code>${esc(e)}</code>`).join(' ') : ''}</div>`);
 
@@ -385,6 +477,10 @@ async function aiRespondReal(text) {
     if (added.length) {
       answer += `<div class="mem-noted">🧠 已记住 ${added.length} 条偏好：` +
         added.map(m => `<b>${esc(m.value)}</b>`).join('、') + '，后续会自动带入建议。</div>';
+    }
+    if (tripChanged && tripState && tripState.dest) {
+      answer += `<div class="mem-noted trip-noted">🛡️ 已同步「行程监控」：<b>${esc(tripState.dest)}${tripState.days ? ' · ' + tripState.days + '天' : ''}</b>，可在左侧「行程监控」查看动态时间线。</div>`;
+      renderMonitorTrip();
     }
     addMsg('ai', answer);
   } else {
@@ -749,6 +845,38 @@ document.querySelectorAll('.plan-card').forEach(card => {
   });
 });
 
+// 依据 chat 提取的 tripState 动态渲染「行程时间线」
+function renderMonitorTrip() {
+  const card = document.getElementById('timelineCard');
+  if (!card) return;
+  if (!tripState || !tripState.dest) {
+    // 尚未在对话中规划行程 → 给出引导（保留默认演示于下方）
+    if (!card.querySelector('.tl-empty-hint')) {
+      const hint = document.createElement('div');
+      hint.className = 'tl-empty-hint';
+      hint.innerHTML = '💡 在「AI 对话」中说出目的地和天数（如「去清迈玩5天」），这里会自动生成你的专属行程时间线。以下为示例数据。';
+      card.insertBefore(hint, card.firstChild.nextSibling);
+    }
+    return;
+  }
+  const { dest, days, from } = tripState;
+  const phases = buildTimelinePhases(dest, days);
+  const rows = phases.map((p, i) => {
+    const st = i === 0 ? 'done' : (i === 1 ? 'active' : 'pending');
+    const dotCls = st === 'active' ? 'tl-dot pulse' : 'tl-dot';
+    const tag = st === 'done' ? '<span class="tl-tag ok">✅</span>'
+      : st === 'active' ? '<span class="tl-tag warn">进行中</span>'
+      : '<span class="tl-tag pending">⏳</span>';
+    return `<div class="tl-item ${st === 'done' ? 'done' : ''}"><div class="${dotCls}"></div>` +
+      `<div class="tl-info"><span class="tl-day">${esc(p.day)}</span><p>${esc(p.text)}</p></div>${tag}</div>`;
+  }).join('');
+  card.innerHTML =
+    `<h3>📍 行程时间线 — ${esc(dest)} ${days || ''}天 <span class="tl-live">· 来自 AI 对话</span></h3>` +
+    (from ? `<p class="tl-sub">出发地：${esc(from)} → 目的地：${esc(dest)}</p>` : '') +
+    rows +
+    `<p class="tl-note">⏱️ 时间线依据你在对话中规划的行程动态生成；天气/航班预警为产品演示。</p>`;
+}
+
 // Live query (real Ctrip 问道)
 function initMonitor() {
   const input = document.getElementById('monQuery');
@@ -766,6 +894,7 @@ function initMonitor() {
   };
   btn.addEventListener('click', go);
   input.addEventListener('keydown', e => { if (e.key === 'Enter') go(); });
+  renderMonitorTrip();   // 首次加载即按已保存行程渲染
 }
 
 // Execute orchestration
