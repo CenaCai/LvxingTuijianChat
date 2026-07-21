@@ -866,6 +866,23 @@ async function aiRespondReal(text) {
       answer += `<div class="mem-noted kb-noted">📚 已引用平台知识库 <b>${kbResults.length}</b> 条（${esc((top.category || '') + '/' + (top.subcategory || ''))}）作为官方参考口径。</div>`;
     }
     addMsg('ai', answer);
+  } else if (kbResults && kbResults.length) {
+    // AI 引擎失败但知识库有高置信命中：直接引用官方口径作为兜底，避免只展示错误
+    setStage(3, 'done');
+    setStage(4, 'done');
+    setStage(5, 'done');
+    await sleep(150);
+    const top = kbResults[0];
+    let answer = `<div class="kb-fallback-hint">⚠️ AI 知识引擎今日额度已用完，以下直接引用平台知识库 <b>${kbResults.length}</b> 条官方口径：</div>` +
+      kbResults.slice(0, 3).map((k, i) => {
+        const ans = esc((k.answer || '').replace(/\s+/g, ' ').trim()).replace(/\n/g, '<br>');
+        return `<div class="kb-faq-item">
+          <div class="kb-faq-q"><b>${i + 1}. ${esc(k.question || '')}</b> <span class="kb-faq-tag">${esc((k.category || '') + '/' + (k.subcategory || ''))}</span></div>
+          <div class="kb-faq-a">${ans}</div>
+        </div>`;
+      }).join('') +
+      `<div class="mem-noted kb-noted">📚 已引用平台知识库 <b>${kbResults.length}</b> 条（${esc((top.category || '') + '/' + (top.subcategory || ''))}）作为官方参考口径。</div>`;
+    addMsg('ai', answer);
   } else {
     addMsg('ai', `<p>⚠️ 暂时连不上 AI 知识引擎，已回退到本地演示回复。</p>`);
     aiRespond(scene === 'route' || scene === 'guide' ? 'general' : scene, text);

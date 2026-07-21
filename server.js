@@ -54,6 +54,18 @@ app.post('/api/ctrip', async (req, res) => {
       body: JSON.stringify(body),
     });
     const text = await upstream.text();
+
+    // 若上游返回 JSON 错误（如限流、参数错误），直接透传错误码，避免把错误 JSON 当作答案渲染
+    if (text.trim().startsWith('{')) {
+      try {
+        const errJson = JSON.parse(text);
+        if (errJson && errJson.error) {
+          const status = /limit exceeded|rate|too many/i.test(text) ? 429 : 502;
+          return res.status(status).json({ error: 'ctrip_upstream_error', message: errJson.error });
+        }
+      } catch {}
+    }
+
     const html = sanitizeHtml(marked.parse(text), {
       allowedTags: sanitizeHtml.defaults.allowedTags.concat([
         'img', 'h1', 'h2', 'h3', 'h4', 'table', 'thead', 'tbody', 'tr', 'th', 'td',
