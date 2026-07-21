@@ -18,6 +18,7 @@ const toast = document.getElementById('toast');
 
 // ----- State -----
 let isTyping = false;
+let clarifyState = { active: false, dest: '', collected: { days: 0, purpose: '', budget: '', notes: '' } };
 const MEM_KEY = 'travelmind_mem';
 // 记忆中心「标签」下拉框静态配置（差旅偏好维度）
 const MEM_TAGS = [
@@ -269,7 +270,11 @@ function sendMessage() {
 
   setTimeout(() => {
     remTyping(tid);
-    aiRespondReal(text);   // 真实调用AI 助手；失败则回退到本地演示回复
+    if (clarifyState.active) {
+      handleClarifyReply(text);   // 处于澄清追问模式，解析用户补充信息
+    } else {
+      aiRespondReal(text);        // 真实调用AI 助手；失败则回退到本地演示回复
+    }
     isTyping = false;
     sendBtn.disabled = false;
     setStatus('就绪');
@@ -450,6 +455,78 @@ function buildMemoryContext(text, entities) {
   };
 }
 
+// ---- 聊天式澄清追问：解析缺失行程槽位 ----
+function extractPurpose(text) {
+  const t = (text || '').toLowerCase();
+  if (/出差|商务|开会|办公|公务/.test(t)) return '出差';
+  if (/游学|学习|上课|语言|进修|研学/.test(t)) return '游学';
+  if (/蜜月|结婚|新婚/.test(t)) return '蜜月';
+  if (/亲子|带娃|带孩子|带小孩|全家|一家/.test(t)) return '亲子';
+  if (/旅行|旅游|玩|度假|休闲|自由行|跟团/.test(t)) return '旅行';
+  return '';
+}
+function extractClarifyDays(text) {
+  const m = text.match(/([0-9]{1,3}|[一二两三四五六七八九十]{1,3})\s*(天|日|周|个月)/);
+  if (!m) return 0;
+  let n = /^\d+$/.test(m[1]) ? parseInt(m[1], 10) : cn2num(m[1]);
+  if (m[2] === '周') n *= 7;
+  else if (m[2] === '个月') n *= 30;
+  return n > 0 && n <= 365 ? n : 0;
+}
+function extractClarifyBudget(text) {
+  const t = (text || '').toLowerCase();
+  const m = t.match(/(?:预算|大概|大约|准备|花)?\s*([0-9]{1,6}(?:\.[0-9]+)?)\s*(?:万|千|k|w)?\s*(?:元|块|rmb|¥)?(?:\s*(?:左右|大概|以内|上下))?/);
+  if (m) {
+    let n = parseFloat(m[1]);
+    if (/万/.test(t)) n *= 10000;
+    else if (/千/.test(t) || /k/.test(t)) n *= 1000;
+    return fmtYuan(n);
+  }
+  if (/穷游|省钱|便宜|经济|低预算/.test(t)) return '经济型/省钱优先';
+  if (/不差钱|高端|豪华|奢华|上限高|品质/.test(t)) return '高端/品质优先';
+  return '';
+}
+function buildClarifyQuestion(collected, dest) {
+  const known = [];
+  if (collected.days) known.push(`${collected.days}天`);
+  if (collected.purpose) known.push(collected.purpose);
+  if (collected.budget) known.push(`预算${collected.budget}`);
+  const missing = [];
+  if (!collected.days) missing.push('去几天');
+  if (!collected.purpose) missing.push('是去出差还是旅行');
+  if (!collected.budget) missing.push('预算大概多少');
+  if (!collected.notes) missing.push('有没有什么其他要求，比如饮食、节奏、同伴');
+  if (known.length) {
+    return `收到，${known.join('、')}。还想确认一下：${missing.join('，')}呢？`;
+  }
+  return `我知道你想去${dest || '这个地方'}，请问${missing.join('，')}呢？`;
+}
+function isClarifyDone(text) {
+  return /^(没有|暂无|没要求|不需要|就这些|够了|ok|好的|行|可以|就这样|随便|无)$/i.test(text.trim());
+}
+function handleClarifyReply(text) {
+  const days = extractClarifyDays(text);
+  const purpose = extractPurpose(text);
+  const budget = extractClarifyBudget(text);
+  const prefs = extractPreferences(text);
+  const c = clarifyState.collected;
+  if (days && !c.days) c.days = days;
+  if (purpose && !c.purpose) c.purpose = purpose;
+  if (budget && !c.budget) c.budget = budget;
+  if (prefs.length) {
+    addMemories(prefs);
+    c.notes = prefs.map(p => p.label + '：' + p.value).join('；');
+  }
+  if (c.days && c.purpose && c.budget) {
+    const full = `我想去${clarifyState.dest}${c.purpose}，${c.days}天，预算${c.budget}` +
+      (c.notes ? '，' + c.notes : '') + '，请帮我规划行程。';
+    clarifyState.active = false;
+    aiRespondReal(full);
+  } else {
+    addMsg('ai', `<p>${esc(buildClarifyQuestion(c, clarifyState.dest))}</p>`);
+  }
+}
+
 // ---- 阶段 2 展示用：抽取目的地/天数等实体（仅用于流程可视化）----
 function extractEntities(text) {
   const ents = [];
@@ -579,7 +656,7 @@ function renderClarificationCard(originalText, tripMems, stageWrap) {
       <button class="btn btn-primary clar-confirm">✅ 沿用这些设定</button>
       <button class="btn clar-reject">🔄 重新设定</button>
     </div>
-    <p class="clarify-tip">选择“重新设定”后，我会忽略以上设定，仅基于你的通用偏好和本次输入来建议。</p>
+    <p class="clarify-tip">选择“重新设定”后，我会用聊天方式问你几个简单问题（去几天、出差还是旅行、预算等），再给出建议。</p>
   `;
   stageWrap.appendChild(card);
   scrollChat();
@@ -599,14 +676,23 @@ function renderClarificationCard(originalText, tripMems, stageWrap) {
 
 // 确认沿用：把行程特定记忆拼回 prompt，重新走完整 6 阶段
 function sendAsUserConfirm(originalText, summary) {
+  clarifyState.active = false;
   const tid = addTyping();
   setTimeout(() => { remTyping(tid); aiRespondReal(originalText + '\n\n（本次行程沿用：' + summary + '）'); }, 400);
 }
 
-// 拒绝沿用：用户已明确排除旧设定，直接按当前输入生成
+// 拒绝沿用：进入聊天式澄清追问，让用户逐步补充本次行程信息
 function sendAsUserReject(originalText) {
+  clarifyState = {
+    active: true,
+    dest: (tripState && tripState.dest) || '',
+    collected: { days: 0, purpose: '', budget: '', notes: '' }
+  };
   const tid = addTyping();
-  setTimeout(() => { remTyping(tid); aiRespondReal(originalText); }, 400);
+  setTimeout(() => {
+    remTyping(tid);
+    addMsg('ai', `<p>${esc(buildClarifyQuestion(clarifyState.collected, clarifyState.dest))}</p>`);
+  }, 300);
 }
 
 // ============================================
