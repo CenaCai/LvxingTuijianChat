@@ -314,6 +314,15 @@
           <div class="gov-item"><strong>时效</strong><p>6个月未用自动标记"待确认"</p></div>
         </div>
       </div>
+
+      <div class="kb-box">
+        <h3>📚 平台知识库（本地 RAG）</h3>
+        <div class="kb-stat" id="kbStat">加载中…</div>
+        <div class="kb-actions">
+          <button class="btn" id="kbReingestBtn">🔄 重新录入知识库</button>
+        </div>
+        <p class="muted mem-hint" id="kbHint">知识库由后端本地 TF-IDF 向量引擎检索，无需联网模型；已录入你的「旅行平台基础QA」，对话时会自动检索并作为官方口径注入 AI。</p>
+      </div>
     </section>
 
     <!-- ========== View: PRD ========== -->

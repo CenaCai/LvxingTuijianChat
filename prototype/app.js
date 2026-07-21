@@ -693,6 +693,23 @@ function stepperHtml(states) {
   return `<div class="stage-stepper">${steps}</div>`;
 }
 
+// 平台知识库检索：本地 TF-IDF RAG，经后端 /api/kb/query 提供。
+// 失败（如后端未启动）时静默降级返回空数组，不影响主流程。
+async function queryKb(text, topK = 3) {
+  try {
+    const r = await fetch('/api/kb/query', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ query: text, topK })
+    });
+    if (!r.ok) return [];
+    const data = await r.json();
+    return Array.isArray(data.results) ? data.results : [];
+  } catch (e) {
+    return [];
+  }
+}
+
 async function aiRespondReal(text) {
   // 阶段状态：pending / active / done
   const states = ['pending', 'pending', 'pending', 'pending', 'pending', 'pending'];
@@ -714,12 +731,14 @@ async function aiRespondReal(text) {
   setStage(1, 'done');
   setDetail(`<div class="stage-detail"><span class="sd-tag">意图</span>${sceneName}${entities.length ? ' · ' + entities.map(e => `<code>${esc(e)}</code>`).join(' ') : ''}</div>`);
 
-  // ③ 记忆检索 + 写入 + 相关性校验
+  // ③ 记忆检索 + 写入 + 相关性校验 + 平台知识库（RAG）检索
   setStage(2, 'active'); await sleep(300);
   const before = extractedMemories.map(m => m.label + '=' + m.value);
   if (prefs.length) addMemories(prefs);
   const added = prefs.filter(p => !before.includes(p.label + '=' + p.value));
   const memCtx = buildMemoryContext(text, entities);
+  // 平台知识库检索（本地 TF-IDF，无需联网模型）
+  const kbResults = await queryKb(text, 3);
   setStage(2, 'done');
 
   // 阶段明细：稳定偏好 + 历史行程设定（区分是否沿用）
@@ -736,6 +755,13 @@ async function aiRespondReal(text) {
   if (added.length) memDetail += `<div class="stage-detail"><span class="sd-tag sd-new">新增记忆 ${added.length}</span>` +
     added.map(m => `<code>${esc(m.label + ': ' + m.value)}</code>`).join(' ') + '</div>';
   setDetail((stageWrap._detail || '') + memDetail);
+
+  // 平台知识库命中明细（位于记忆检索之后，便于对比「记忆 vs 知识库」两类来源）
+  if (kbResults.length) {
+    const kbDetail = `<div class="stage-detail"><span class="sd-tag sd-kb">📚 知识库命中 ${kbResults.length}</span>` +
+      kbResults.slice(0, 3).map(k => `<code>${esc((k.category || '') + '/' + (k.subcategory || '') + ' · ' + (k.question || '').slice(0, 16))}</code>`).join(' ') + '</div>';
+    setDetail((stageWrap._detail || '') + kbDetail);
+  }
 
   // 若输入信息不足，先澄清而非直接调用 AI
   if (memCtx.needsClarification) {
@@ -761,12 +787,20 @@ async function aiRespondReal(text) {
     return;
   }
 
-  // ④ 工具调用：仅注入已确认/稳定的记忆，调用真实 AI 知识引擎
+  // ④ 工具调用：仅注入已确认/稳定的记忆 + 平台知识库参考，调用真实 AI 知识引擎
   setStage(3, 'active');
   const memStr = memCtx.injectable.slice(0, 6).map(m => `${m.label}:${m.value}`).join('；');
-  const augmented = memStr
+  let augmented = memStr
     ? `${text}\n\n【用户长期偏好，请在建议中优先考虑】${memStr}`
     : text;
+  // 把命中的平台知识库官方口径拼进 prompt，让 AI 优先采用，避免编造
+  if (kbResults && kbResults.length) {
+    const kbRef = kbResults.slice(0, 3).map(k => {
+      const ans = (k.answer || '').replace(/\s+/g, ' ').trim().slice(0, 380);
+      return `Q: ${k.question || ''}\nA: ${ans}`;
+    }).join('\n\n');
+    augmented += `\n\n【平台知识库参考（请优先采用以下官方口径作答，不要与之一致性冲突）】\n${kbRef}`;
+  }
   const html = await ctripHtml(augmented);
   const ok = html && html.indexOf('⚠️ 查询失败') === -1;
   setStage(3, ok ? 'done' : 'pending');
@@ -788,6 +822,10 @@ async function aiRespondReal(text) {
     if (tripChanged && tripState && tripState.dest) {
       answer += `<div class="mem-noted trip-noted">🛡️ 已同步「行程监控」：<b>${esc(tripState.dest)}${tripState.days ? ' · ' + tripState.days + '天' : ''}</b>，可在左侧「行程监控」查看动态时间线。</div>`;
       renderMonitorTrip();
+    }
+    if (kbResults && kbResults.length) {
+      const top = kbResults[0];
+      answer += `<div class="mem-noted kb-noted">📚 已引用平台知识库 <b>${kbResults.length}</b> 条（${esc((top.category || '') + '/' + (top.subcategory || ''))}）作为官方参考口径。</div>`;
     }
     addMsg('ai', answer);
   } else {
@@ -1449,6 +1487,40 @@ function renderMemoryPage() {
   }));
 }
 
+// 平台知识库面板：展示录入条数 / 分类数，并提供「重新录入」入口
+async function renderKbPanel() {
+  const stat = document.getElementById('kbStat');
+  if (!stat) return;
+  try {
+    const r = await fetch('/api/kb/stats');
+    if (!r.ok) { stat.innerHTML = '⚠️ 知识库状态获取失败'; return; }
+    const d = await r.json();
+    const cats = Object.keys(d.categories || {}).length;
+    stat.innerHTML = `已录入 <b>${d.count}</b> 条问答 · 覆盖 <b>${cats}</b> 个业务分类`;
+  } catch (e) {
+    stat.innerHTML = '⚠️ 知识库服务未连接（对话仍可用，仅离线）';
+  }
+}
+
+function initKb() {
+  const btn = document.getElementById('kbReingestBtn');
+  if (btn) btn.addEventListener('click', async () => {
+    btn.disabled = true;
+    const old = btn.textContent;
+    btn.textContent = '⏳ 录入中…';
+    try {
+      const r = await fetch('/api/kb/reingest', { method: 'POST' });
+      const d = await r.json();
+      btn.textContent = `✅ 已录入 ${d.added || 0} 条`;
+    } catch (e) {
+      btn.textContent = '⚠️ 录入失败';
+    }
+    renderKbPanel();
+    setTimeout(() => { btn.disabled = false; btn.textContent = old; }, 1600);
+  });
+  renderKbPanel();
+}
+
 // 金额格式化：>=1万 显示为「X万元」，否则「X元」
 function fmtYuan(n) {
   if (n >= 10000) { const w = n / 10000; return (Math.round(w * 10) / 10) + '万元'; }
@@ -1543,6 +1615,7 @@ function initMemory() {
 initCompare();
 initMonitor();
 initMemory();
+initKb();
 switchView('chat');
 showCtx('default');
 setStatus('就绪');
