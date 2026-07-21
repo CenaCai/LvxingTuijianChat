@@ -1,5 +1,5 @@
 /* ============================================
-   智行 TravelMind — Interactive Logic
+   CSTS TravelChat — Interactive Logic
    ============================================ */
 
 // ----- DOM -----
@@ -750,4 +750,4 @@ switchView('chat');
 showCtx('default');
 setStatus('就绪');
 
-console.log('🧳 智行 TravelMind 就绪');
+console.log('🧳 CSTS TravelChat 就绪');

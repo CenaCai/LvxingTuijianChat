@@ -1,4 +1,4 @@
-# 智行 TravelMind — AI 差旅助手（LvxingTuijianChat）
+# CSTS TravelChat — 您的AI 差旅助手
 
 > **现状说明**：本仓库当前是「前端交互原型 + 携程问道（TripAI）代理」，所有旅行数据均来自携程官方「问道」接口（`wendao-skill-prod.ctrip.com/skill/query`）。
 > - **对话**：自由输入经 `server.js` 代理调用携程问道，返回真实酒店 / 机票 / 火车票 / 景点 / 玩乐答案。
