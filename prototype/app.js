@@ -107,6 +107,7 @@ function updateTripFromInput(text) {
     trip.updatedAt = Date.now();
     tripState = trip;
     saveTrip();
+    renderTripMemory();   // 行程要素变化即时反映到记忆中心面板
   }
   return changed;
 }
@@ -151,6 +152,7 @@ function switchView(id) {
   views.forEach(v => v.classList.toggle('is-visible', v.id === `view-${id}`));
   navItems.forEach(n => n.classList.toggle('is-active', n.dataset.view === id));
   if (id === 'monitor') renderMonitorTrip();   // 切到行程监控时按最新 chat 行程刷新
+  if (id === 'memory') renderTripMemory();     // 切到记忆中心时按最新行程刷新当前行程记忆
 }
 
 navItems.forEach(n => n.addEventListener('click', () => switchView(n.dataset.view)));
@@ -512,6 +514,7 @@ function addMemories(mems) {
   saveMemories();
   updateCtxMemory();
   renderMemoryPage();
+  renderTripMemory();   // 预算/要求等记忆变化会同步到当前行程记忆面板
 }
 
 // ============================================
@@ -1052,6 +1055,72 @@ function renderMemoryPage() {
   }));
 }
 
+// 金额格式化：>=1万 显示为「X万元」，否则「X元」
+function fmtYuan(n) {
+  if (n >= 10000) { const w = n / 10000; return (Math.round(w * 10) / 10) + '万元'; }
+  return Math.round(n).toLocaleString('zh-CN') + '元';
+}
+
+// 由预算习惯记忆推导全程预算：支持「1000元/天 ×天数」或整笔预算或原文展示
+function deriveTripBudget() {
+  const bm = extractedMemories.find(m => m.label === '预算习惯');
+  if (!bm) return null;
+  const v = bm.value;
+  const num = v.match(/(\d[\d,]*(?:\.\d+)?)\s*(万|千|元|块)?/);
+  const perDay = /每?\s*天|每日|day/i.test(v);
+  if (num) {
+    let yuan = parseFloat(num[1].replace(/,/g, ''));
+    if (num[2] === '万') yuan *= 10000;
+    else if (num[2] === '千') yuan *= 1000;
+    if (perDay && tripState && tripState.days) {
+      const total = Math.round(yuan * tripState.days);
+      return `${fmtYuan(total)}（${fmtYuan(yuan)}/天 × ${tripState.days}天）`;
+    }
+    let s = fmtYuan(yuan);
+    if (!perDay && tripState && tripState.days) s += ` · 约${fmtYuan(yuan / tripState.days)}/天`;
+    return s;
+  }
+  return v; // 非数字预算（穷游 / 不差钱 等）直接展示原文
+}
+
+// 由相关记忆汇总「特别要求」
+function deriveTripNotes() {
+  const labels = ['饮食偏好', '出行节奏', '出行同伴', '忌讳/禁忌', '健康与体力', '兴趣主题'];
+  const items = extractedMemories.filter(m => labels.includes(m.label)).map(m => m.value);
+  return items.length ? items.join('；') : '';
+}
+
+// 动态渲染记忆中心「当前行程记忆」面板（数据源 = tripState + 长期记忆）
+function renderTripMemory() {
+  const goal = document.getElementById('tripGoal');
+  if (!goal) return;
+  const budget = document.getElementById('tripBudget');
+  const cities = document.getElementById('tripCities');
+  const notes = document.getElementById('tripNotes');
+  const meta = document.getElementById('tripMeta');
+
+  if (!tripState || !tripState.dest) {
+    goal.textContent = '尚未规划';
+    budget.textContent = '未设置';
+    cities.textContent = '—';
+    notes.textContent = '暂无';
+    if (meta) meta.textContent = '在「AI 对话」中说出目的地和天数即可自动生成';
+    return;
+  }
+  const { dest, days, from } = tripState;
+  const route = (from ? from + ' → ' : '') + dest;
+  goal.textContent = `${route}${days ? ' · ' + days + '天' : ''}`;
+  cities.textContent = route;
+  budget.textContent = deriveTripBudget() || '未设置';
+  notes.textContent = deriveTripNotes() || '暂无';
+  if (meta) {
+    const t = tripState.updatedAt
+      ? new Date(tripState.updatedAt).toLocaleString('zh-CN', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' })
+      : '';
+    meta.textContent = t ? `数据来自对话规划 · 更新于 ${t}` : '数据来自对话规划';
+  }
+}
+
 function initMemory() {
   // 用静态标签填充下拉框
   const sel = document.getElementById('memKey');
@@ -1071,6 +1140,7 @@ function initMemory() {
     showToast('✅ 已添加记忆');
   });
   renderMemoryPage();
+  renderTripMemory();   // 同步刷新当前行程记忆面板
 }
 
 // ============================================
