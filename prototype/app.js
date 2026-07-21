@@ -109,7 +109,7 @@ function handleChip(label) {
   else if (label.includes('证据')) aiRespond('evidence');
   else if (label.includes('预算')) sendAsUser('帮我做预算分配');
   else if (label.includes('路线') || label.includes('交通')) sendAsUser('帮我规划城市间的交通路线');
-  else if (label.includes('攻略')) sendAsUser('我有一些小红书攻略想粘贴给你');
+  else if (label.includes('攻略')) sendAsUser('我有一些旅行攻略想粘贴给你');
   else if (label.includes('保存')) showToast('✅ 已保存');
   else sendAsUser(label);
 }
@@ -259,7 +259,7 @@ function rEurope(text) {
       <div class="bubble-card-row"><span class="l">出行节奏</span><span class="v">慢节奏</span></div>
     </div>
     <div class="bubble-warn">🧠 这些约束已存入长期记忆。即使在行程第45天，我也会记得今天的设定。</div>
-    <p>接下来你可以粘贴收集的小红书攻略、签证资料，或让我规划具体路线。</p>
+    <p>接下来你可以粘贴收集的旅行攻略、签证资料，或让我规划具体路线。</p>
   `);
 
   addChips(['📅 帮我规划城市路线', '💰 帮我做预算分配', '📎 粘贴攻略链接']);
@@ -272,7 +272,7 @@ function rEurope(text) {
 function rCompare() {
   addMsg('ai', `
     <p>好问题！让我并行查询两边数据...</p>
-    <p style="font-size:12px;color:var(--ink2);">🔧 同时调用：天气MCP · 航班MCP · Booking住宿MCP · 知识库RAG</p>
+    <p style="font-size:12px;color:var(--ink2);">🔧 同时调用：天气MCP · 航班MCP · 住宿MCP · 知识库RAG</p>
   `);
 
   addMsg('ai', `
@@ -309,7 +309,7 @@ function rCompare() {
 function rEmergency() {
   addMsg('ai', `
     <p>🚨 <span class="detect-tag-inline auto">🤖 系统自动检测</span></p>
-    <p style="font-size:11px;color:var(--ink2);">天气MCP(OpenWeatherMap) · 15分钟轮询 · 置信度96%</p>
+    <p style="font-size:11px;color:var(--ink2);">天气MCP · 15分钟轮询 · 置信度96%</p>
   `);
 
   addMsg('ai', `
@@ -342,7 +342,7 @@ function rExecute() {
   const steps = [
     {name:'取消户外课程场地',api:'预订MCP: cancel_booking',cost:'¥0'},
     {name:'预订大理州博物馆',api:'预订MCP: create_booking',cost:'¥0'},
-    {name:'确认扎染工坊场地',api:'飞猪MCP: book_local',cost:'¥0'},
+    {name:'确认扎染工坊场地',api:'预订MCP: book_local',cost:'¥0'},
     {name:'通知学员+更新行程',api:'通知MCP: send_wechat',cost:'¥0.75'},
   ];
 
@@ -422,9 +422,9 @@ function rEvidence() {
   addMsg('ai', `
     <p>📋 <strong>证据链</strong></p>
     <div class="bubble-card">
-      <div class="bubble-card-row"><span class="l">🌤️ 天气</span><span class="v">OpenWeatherMap · 2026-07-15</span></div>
+      <div class="bubble-card-row"><span class="l">🌤️ 天气</span><span class="v">天气服务 · 2026-07-15</span></div>
       <div class="bubble-card-row"><span class="l">✈️ 机票</span><span class="v">实时数据 · ¥1,600-4,200</span></div>
-      <div class="bubble-card-row"><span class="l">🏨 住宿</span><span class="v">Booking · ¥150-350/晚</span></div>
+      <div class="bubble-card-row"><span class="l">🏨 住宿</span><span class="v">住宿平台 · ¥150-350/晚</span></div>
       <div class="bubble-card-row"><span class="l">📚 课程</span><span class="v">知识库RAG · 4.6/5 (128条)</span></div>
     </div>
     <div class="bubble-warn">⚠️ 所有价格标注了查询时间。课程评价超6个月需重新确认。</div>
