@@ -1158,3 +1158,89 @@ a { color: var(--blue); text-decoration: none; }
 .tl-note { font-size: 11.5px; color: var(--ink3, #94a3b8); margin-top: 14px; line-height: 1.6; }
 .tl-empty-hint { font-size: 12.5px; line-height: 1.6; color: #1d4ed8; background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 8px; padding: 8px 12px; margin-bottom: 16px; }
 .tl-item.active .tl-dot.pulse { background: var(--orange, #f59e0b); border-color: var(--orange, #f59e0b); box-shadow: 0 0 0 4px rgba(245,158,11,.15); }
+
+/* ============================================
+   下单面板（Plan A / Plan B 共用）
+   ============================================ */
+.booking-mask {
+  position: fixed; inset: 0; z-index: 1000;
+  background: rgba(0,0,0,0.32);
+  display: flex; align-items: center; justify-content: center;
+  padding: 20px; animation: bmfade .18s ease;
+}
+@keyframes bmfade { from { opacity: 0; } to { opacity: 1; } }
+.booking-sheet {
+  width: 100%; max-width: 460px; max-height: 88vh; overflow: auto;
+  background: var(--surface); border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-lg); border: 1px solid var(--border);
+  animation: bmrise .22s cubic-bezier(0.4,0,0.2,1);
+}
+@keyframes bmrise { from { transform: translateY(14px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+.booking-head {
+  display: flex; align-items: flex-start; justify-content: space-between;
+  padding: 18px 20px 12px; gap: 12px;
+}
+.booking-head h3 { font-size: 17px; color: var(--ink); margin-top: 8px; }
+.booking-plan-badge {
+  display: inline-block; font-size: 11px; font-weight: 700; color: #fff;
+  padding: 2px 9px; border-radius: 999px;
+}
+.booking-plan-badge.a { background: var(--blue); }
+.booking-plan-badge.b { background: var(--orange); }
+.booking-close {
+  border: none; background: var(--border-light); color: var(--ink2);
+  width: 30px; height: 30px; border-radius: 50%; cursor: pointer; font-size: 15px;
+  flex-shrink: 0; transition: var(--transition);
+}
+.booking-close:hover { background: var(--border); color: var(--ink); }
+.booking-stub-note {
+  margin: 0 20px 14px; font-size: 11.5px; line-height: 1.55;
+  color: #92400e; background: #fff7ed; border: 1px solid #fed7aa;
+  border-radius: 10px; padding: 8px 12px;
+}
+.booking-body { padding: 0 20px; }
+.booking-trip { font-size: 13px; color: var(--ink2); margin-bottom: 12px; }
+.booking-trip b { color: var(--ink); }
+.booking-items { display: flex; flex-direction: column; gap: 10px; }
+.booking-item {
+  display: flex; align-items: center; gap: 12px;
+  padding: 12px; border: 1px solid var(--border); border-radius: var(--radius-md);
+  background: var(--bg);
+}
+.bi-ic { font-size: 20px; flex-shrink: 0; }
+.bi-main { flex: 1; min-width: 0; }
+.bi-main strong { display: block; font-size: 13.5px; color: var(--ink); }
+.bi-sub { font-size: 11px; color: var(--ink2); }
+.bi-sub code { background: var(--border-light); padding: 0 4px; border-radius: 4px; font-size: 10px; }
+.bi-price { font-size: 14px; font-weight: 700; color: var(--ink); flex-shrink: 0; }
+.booking-foot {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  padding: 16px 20px; margin-top: 16px; border-top: 1px solid var(--border-light);
+  position: sticky; bottom: 0; background: var(--surface);
+}
+.booking-total { font-size: 13px; color: var(--ink2); }
+.booking-total b { font-size: 19px; color: var(--red); font-weight: 800; }
+.booking-est { font-size: 10.5px; color: var(--ink3); display: block; margin-top: 2px; }
+.booking-submit { flex-shrink: 0; }
+.booking-err, .loading { padding: 24px 0; text-align: center; color: var(--ink2); font-size: 13px; }
+/* 下单成功态 */
+.booking-success { text-align: center; padding: 12px 0 4px; }
+.bs-check { font-size: 40px; margin-bottom: 6px; }
+.booking-success h3 { font-size: 17px; color: var(--ink); margin-bottom: 16px; }
+.bs-row {
+  display: flex; justify-content: space-between; font-size: 13px;
+  padding: 9px 4px; border-bottom: 1px dashed var(--border-light); text-align: left;
+}
+.bs-row span { color: var(--ink2); }
+.bs-row b { color: var(--ink); }
+.bs-status { color: var(--orange) !important; }
+.bs-note { font-size: 11px; color: var(--ink3); margin-top: 12px; line-height: 1.55; }
+/* 对话里的 Plan A 下单入口 */
+.book-cta {
+  display: inline-flex; align-items: center; gap: 6px; margin-top: 10px;
+  padding: 8px 16px; border: none; border-radius: 999px; cursor: pointer;
+  background: var(--blue); color: #fff; font-size: 13px; font-weight: 600;
+  transition: var(--transition);
+}
+.book-cta:hover { filter: brightness(1.06); transform: translateY(-1px); }
+.book-cta.b { background: var(--orange); }

@@ -272,7 +272,14 @@ function addChips(labels) {
 }
 
 async function handleChip(label) {
-  if (label.includes('执行 Plan B1') || label.includes('执行Plan B1')) sendAsUser('就Plan B1，帮我执行');
+  if (label.includes('下单') || label.includes('预订')) {
+    if (tripState && tripState.dest) {
+      openBookingSheet({ plan: 'A', dest: tripState.dest, days: tripState.days, from: tripState.from, title: `行程下单预订 — ${tripState.dest}` });
+    } else {
+      showToast('⚠️ 请先在对话中说出目的地和天数');
+    }
+  }
+  else if (label.includes('执行 Plan B1') || label.includes('执行Plan B1')) sendAsUser('就Plan B1，帮我执行');
   else if (label.includes('Plan B2') || label.includes('查看 Plan B2')) await aiRespond('planb2');
   else if (label.includes('证据')) aiRespond('evidence');
   else if (label.includes('预算')) sendAsUser('帮我做预算分配');
@@ -913,7 +920,9 @@ async function aiRespondReal(text) {
       const top = display[0] || kbResults[0];
       answer += `<div class="mem-noted kb-noted">📚 已引用平台知识库 <b>${display.length}</b> 条（${esc((top.category || '') + '/' + (top.subcategory || ''))}）作为官方参考口径。</div>`;
     }
-    addMsg('ai', answer);
+    const answerMsg = addMsg('ai', answer);
+    // Plan A 下单入口：已有目的地行程时，提供整段行程下单预订
+    if (tripState && tripState.dest) appendBookCta(answerMsg, 'A');
   } else if (kbResults && kbResults.length && kbUseful) {
     // AI 引擎失败但知识库有高置信命中：直接引用官方口径作为兜底，避免只展示错误
     setStage(3, 'done');
@@ -1057,30 +1066,41 @@ function addMemories(mems) {
 // Scene: Europe (Knowledge Base)
 // ============================================
 function rEurope(text) {
+  // 从本次输入真实抽取约束（不再写死）
   const mems = [];
   if (text.includes('月')) { const m = text.match(/(\d+)\s*个?月/); if (m) mems.push({label:'行程时长',value:m[1]+' 个月'}); }
-  if (text.includes('万')) { const m = text.match(/(\d+)\s*万/); if (m) mems.push({label:'总预算',value:m[1]+' 万元'}); }
+  if (text.includes('周')) { const m = text.match(/(\d+)\s*周/); if (m) mems.push({label:'行程时长',value:m[1]+' 周'}); }
+  if (text.includes('万')) { const m = text.match(/(\d+(?:\.\d+)?)\s*万/); if (m) mems.push({label:'总预算',value:m[1]+' 万元'}); }
   if (text.includes('清淡')||text.includes('少辣')) mems.push({label:'饮食偏好',value:'清淡、少辣'});
   if (text.includes('语言')||text.includes('学')) mems.push({label:'学习目标',value:'语言提升+文化体验'});
   if (text.includes('慢')||text.includes('不赶')) mems.push({label:'出行节奏',value:'慢节奏、不赶路'});
   addMemories(mems);
 
+  // 展示真实存入的约束（取记忆中心里与本次相关的条目），无则给引导
+  const showLabels = ['行程时长', '总预算', '学习目标', '目的地', '饮食偏好', '出行节奏', '预算习惯', '住宿偏好'];
+  const rows = extractedMemories
+    .filter(m => showLabels.includes(m.label))
+    .slice(0, 6)
+    .map(m => `<div class="bubble-card-row"><span class="l">${esc(m.label)}</span><span class="v">${esc(m.value)}</span></div>`)
+    .join('');
+
+  const cardHtml = rows
+    ? `<div class="bubble-card">
+        <div class="bubble-card-header">🔍 已提取的约束条件（已存入长期记忆）</div>
+        ${rows}
+      </div>
+      <div class="bubble-warn">🧠 这些约束已存入长期记忆，后续对话与规划都会自动带入。</div>`
+    : `<div class="bubble-warn">💡 你可以直接告诉我：想去哪、去多久、预算多少、偏好什么，我会实时提取成长期约束。</div>`;
+
   addMsg('ai', `
     <p>好的！让我帮你理清思路 ✨</p>
-    <div class="bubble-card">
-      <div class="bubble-card-header">🔍 已提取的约束条件（已存入长期记忆）</div>
-      <div class="bubble-card-row"><span class="l">行程时长</span><span class="v">2 个月</span></div>
-      <div class="bubble-card-row"><span class="l">总预算</span><span class="v">¥80,000</span></div>
-      <div class="bubble-card-row"><span class="l">目的</span><span class="v">语言学习 + 文化体验</span></div>
-      <div class="bubble-card-row"><span class="l">饮食偏好</span><span class="v">清淡、少辣</span></div>
-      <div class="bubble-card-row"><span class="l">出行节奏</span><span class="v">慢节奏</span></div>
-    </div>
-    <div class="bubble-warn">🧠 这些约束已存入长期记忆。即使在行程第45天，我也会记得今天的设定。</div>
+    ${cardHtml}
     <p>接下来你可以粘贴收集的旅行攻略、签证资料，或让我规划具体路线。</p>
   `);
 
   addChips(['📅 帮我规划城市路线', '💰 帮我做预算分配', '📎 粘贴攻略链接']);
-  showToast('🧠 5个约束已存入长期记忆');
+  const n = mems.length;
+  if (n) showToast(`🧠 ${n}个约束已存入长期记忆`);
 }
 
 // ============================================
@@ -1093,7 +1113,7 @@ function rCompare() {
   `);
 
   addMsg('ai', `
-    <p>基于你之前的偏好（学习优先、体力友好、预算1.2万）：</p>
+    <p>示意对比（演示模型 · 学习优先、体力友好）：</p>
     <div class="compare-mini">
       <div class="compare-mini-item">
         <div>🏔️ 新疆自驾</div>
@@ -1113,11 +1133,11 @@ function rCompare() {
       <div class="bubble-card-row"><span class="l">😌 体力友好</span><span class="v">新疆46 · 云南82</span></div>
       <div class="bubble-card-row"><span class="l">🏞️ 自然体验</span><span class="v">新疆94 · 云南78</span></div>
     </div>
-    <div class="bubble-warn">⚠️ 天气>7天准确率60% · 机票为当前中位数 · 课程评价3个月前更新</div>
-    <p>推荐 <strong>🌿 云南15天游学</strong>。可在「方案对比」页调节权重查看变化。</p>
+    <div class="bubble-warn">🧪 以上为示意评分（演示模型）。真实多维对比请到「方案对比」页输入目的地，由 AI 助手实时生成。</div>
+    <p>示意结论：<strong>🌿 云南15天游学</strong> 更契合学习优先的偏好。可在「方案对比」页用真实数据调权重。</p>
   `);
 
-  addChips(['🔍 展开详细证据', '📊 去方案对比页调节权重', '💾 保存对比结果']);
+  addChips(['🔍 展开详细证据', '📊 去方案对比页（真实数据）', '💾 保存对比结果']);
 }
 
 // ============================================
@@ -1133,9 +1153,10 @@ async function rEmergency() {
   inc.rebookCost = cost.rebookCost;
   inc.b2total = cost.b2total;
   inc.b2meta = [`💰 净增约 ¥${inc.b2total}`, '🚌 需改签交通', '🏨 酒店退改'];
+  const conf = 90 + (hashStr(dest) % 9);   // 与监控页一致的动态置信度
   addMsg('ai', `
     <p>🚨 <span class="detect-tag-inline auto">🤖 系统自动检测</span></p>
-    <p style="font-size:11px;color:var(--ink2);">天气MCP · 15分钟轮询 · 置信度96%</p>
+    <p style="font-size:11px;color:var(--ink2);">天气监控 · 模拟预警 · 置信度 ${conf}%</p>
   `);
 
   addMsg('ai', `
@@ -1177,6 +1198,7 @@ async function rExecute() {
     cost: '¥' + s.cost,
   }));
   const steps = inc.orphSteps;
+  const t0 = performance.now();   // 实测编排耗时
 
   addMsg('ai', `
     <p>好的！激活 <strong>Skill: execute_rebook</strong> → Agent 按依赖关系自动编排 MCP 调用链：</p>
@@ -1228,12 +1250,16 @@ async function rExecute() {
   anim(3,'run',2100); anim(3,'done',2600);
 
   setTimeout(() => {
-    addMsg('ai', `
+    const elapsed = ((performance.now() - t0) / 1000).toFixed(1);   // 真实耗时
+    const doneMsg = addMsg('ai', `
       <p>✅ <strong>全部执行完成！</strong></p>
-      <p style="font-size:11px;color:var(--ink2);">总耗时3.2秒 · 4个MCP调用成功 · 总费用¥${inc.notifyCost}</p>
+      <p style="font-size:11px;color:var(--ink2);">总耗时${elapsed}秒 · ${steps.length}个MCP调用成功 · 编排费用¥${inc.notifyCost}</p>
       <p>同行人已收到行程更新通知。</p>
     `);
-    showToast('✅ Plan B1 执行完成');
+    // Plan B 改订下单入口
+    const bookItems = planBBookingItems(inc, (tripState && tripState.dest) || '目的地');
+    if (bookItems.length) appendBookCta(doneMsg, 'B', { items: bookItems });
+    showToast('✅ Plan B 执行完成');
   }, 2900);
 }
 
@@ -1256,46 +1282,87 @@ async function rPlanB2() {
 }
 
 function rEvidence() {
+  const dest = (tripState && tripState.dest) || '目的地';
+  const today = new Date().toLocaleDateString('zh-CN');
   addMsg('ai', `
-    <p>📋 <strong>证据链</strong></p>
+    <p>📋 <strong>证据链 — ${esc(dest)}</strong></p>
     <div class="bubble-card">
-      <div class="bubble-card-row"><span class="l">🌤️ 天气</span><span class="v">天气服务 · 2026-07-15</span></div>
-      <div class="bubble-card-row"><span class="l">✈️ 机票</span><span class="v">实时数据 · ¥1,600-4,200</span></div>
-      <div class="bubble-card-row"><span class="l">🏨 住宿</span><span class="v">住宿平台 · ¥150-350/晚</span></div>
-      <div class="bubble-card-row"><span class="l">📚 课程</span><span class="v">知识库RAG · 4.6/5 (128条)</span></div>
+      <div class="bubble-card-row"><span class="l">🌤️ 天气</span><span class="v">天气服务 · 查询于 ${esc(today)}</span></div>
+      <div class="bubble-card-row"><span class="l">✈️ 机票</span><span class="v">预估区间 · 以下单实时报价为准</span></div>
+      <div class="bubble-card-row"><span class="l">🏨 住宿</span><span class="v">预估区间 · 以下单实时报价为准</span></div>
+      <div class="bubble-card-row"><span class="l">📚 攻略</span><span class="v">平台知识库 RAG 检索</span></div>
     </div>
-    <div class="bubble-warn">⚠️ 所有价格标注了查询时间。课程评价超6个月需重新确认。</div>
+    <div class="bubble-warn">⚠️ 价格为预估，真实成交价需在「下单预订」中获取实时报价。</div>
   `);
 }
 
 function rBudget() {
+  // 预算总额：优先「总预算」记忆，其次由「预算习惯」×天数推算，否则给引导
+  const dest = (tripState && tripState.dest) || '';
+  const days = (tripState && tripState.days) || 0;
+  const totalMem = extractedMemories.find(m => m.label === '总预算');
+  let total = 0;
+  if (totalMem) {
+    const m = totalMem.value.match(/(\d+(?:\.\d+)?)/);
+    if (m) { total = parseFloat(m[1]); if (/万/.test(totalMem.value)) total *= 10000; }
+  }
+  if (!total) {
+    const perDayMem = extractedMemories.find(m => m.label === '预算习惯');
+    if (perDayMem && days) {
+      const m = perDayMem.value.match(/(\d[\d,]*)/);
+      if (m) total = parseFloat(m[1].replace(/,/g, '')) * days;
+    }
+  }
+
+  if (!total) {
+    addMsg('ai', `
+      <p>要做预算分配，我需要先知道你的<strong>总预算</strong>和<strong>行程天数</strong>。</p>
+      <p>你可以说：例如「预算3万，玩10天」，我就能按机票/住宿/餐饮/活动/应急给出建议分配。</p>
+    `);
+    addChips(['📅 帮我规划城市路线']);
+    return;
+  }
+
+  // 按行程结构动态分配（比例透明、可解释；金额随你的预算与天数变化）
+  const alloc = [
+    ['✈️ 交通/机票', 0.20],
+    ['🏨 住宿' + (days ? `（${Math.max(1, days - 1)}晚）` : ''), 0.28],
+    ['🍽️ 餐饮', 0.18],
+    ['🎫 活动/门票', 0.16],
+    ['🚇 当地交通', 0.08],
+    ['💡 应急预留', 0.10],
+  ];
+  const rows = alloc.map(([label, pct]) =>
+    `<div class="bubble-card-row"><span class="l">${label}</span><span class="v">${yuan(total * pct)} · ${Math.round(pct * 100)}%</span></div>`
+  ).join('');
+
   addMsg('ai', `
-    <p>基于2个月欧洲游学 + 8万预算：</p>
+    <p>基于${dest ? '「' + esc(dest) + '」' : '你的行程'}${days ? ' · ' + days + '天' : ''} · 总预算 <strong>${yuan(total)}</strong>：</p>
     <div class="bubble-card">
-      <div class="bubble-card-header">💰 建议分配</div>
-      <div class="bubble-card-row"><span class="l">✈️ 国际机票</span><span class="v">¥12,000</span></div>
-      <div class="bubble-card-row"><span class="l">🏫 语言课程(8周)</span><span class="v">¥24,000</span></div>
-      <div class="bubble-card-row"><span class="l">🏨 住宿(60晚)</span><span class="v">¥21,000</span></div>
-      <div class="bubble-card-row"><span class="l">🍽️ 餐饮</span><span class="v">¥12,000</span></div>
-      <div class="bubble-card-row"><span class="l">🚆 欧洲交通</span><span class="v">¥6,000</span></div>
-      <div class="bubble-card-row"><span class="l">💡 应急</span><span class="v">¥5,000</span></div>
-      <div class="bubble-card-row"><span class="l"><strong>合计</strong></span><span class="v"><strong>¥80,000</strong></span></div>
+      <div class="bubble-card-header">💰 建议分配（按行程结构测算）</div>
+      ${rows}
+      <div class="bubble-card-row"><span class="l"><strong>合计</strong></span><span class="v"><strong>${yuan(total)}</strong></span></div>
     </div>
-    <div class="bubble-warn">⚠️ 机票为当前中位数 · 汇率1EUR≈7.8CNY</div>
+    <div class="bubble-warn">⚠️ 比例为通用测算模型，实际以下单报价为准。</div>
   `);
-  addChips(['📅 帮我规划城市路线', '💾 保存预算方案']);
+  addChips(['📅 帮我规划城市路线', '🧾 下单预订', '💾 保存预算方案']);
 }
 
 function rMemory() {
+  if (!extractedMemories.length) {
+    addMsg('ai', `
+      <p>🧠 你目前还没有长期记忆。</p>
+      <p>在对话中描述偏好（如「我吃得清淡」「预算每天1000」「喜欢慢节奏」），我会自动提取并存入，也可以在「记忆中心」手动添加。</p>
+    `);
+    return;
+  }
+  const rows = extractedMemories.map(m =>
+    `<div class="bubble-card-row"><span class="l">${m.locked ? '🔒' : '📌'} ${esc(m.label)}</span><span class="v">${esc(m.value)}</span></div>`
+  ).join('');
   addMsg('ai', `
-    <p>🧠 你的长期记忆：</p>
-    <div class="bubble-card">
-      <div class="bubble-card-row"><span class="l">🍽️ 饮食</span><span class="v">清淡、少辣</span></div>
-      <div class="bubble-card-row"><span class="l">💰 预算</span><span class="v">800-1200元/天</span></div>
-      <div class="bubble-card-row"><span class="l">🏃 节奏</span><span class="v">慢节奏、不赶路</span></div>
-      <div class="bubble-card-row"><span class="l">🏨 住宿</span><span class="v">民宿/精品 300-500元</span></div>
-    </div>
-    <p>这些记忆会在未来的对话中自动激活。你可以随时编辑或删除。</p>
+    <p>🧠 你的长期记忆（共 ${extractedMemories.length} 条）：</p>
+    <div class="bubble-card">${rows}</div>
+    <p>这些记忆会在未来的对话中自动激活。你可以在「记忆中心」随时编辑或删除。</p>
   `);
 }
 
@@ -1652,6 +1719,7 @@ async function executePlanB(plan, totalSteps) {
   if (!btn || btn.disabled) return;
   const planName = plan || monSelectedPlan || 'B1';
   const n = totalSteps || 4;
+  const t0 = performance.now();   // 实测编排耗时
   btn.disabled = true;
   btn.textContent = `⏳ Agent 编排中（${planName}）...`;
   setStatus('执行中...', true);
@@ -1681,10 +1749,28 @@ async function executePlanB(plan, totalSteps) {
   btn.textContent = '✅ 全部执行完成';
   btn.style.background = '#34c759';
   const inc = window.__currentIncident || buildIncident(tripState.dest || '目的地', tripState.days || 5);
+  const elapsed = ((performance.now() - t0) / 1000).toFixed(1);   // 真实耗时
   const note = document.getElementById('execNote');
-  if (note) note.innerHTML = `✅ <strong>执行完成（${planName}）</strong>：${n}个MCP调用全部成功。场地已取消→室内场地已预订→工坊已确认→同行人已通知。总耗时3.2秒，费用¥${inc.notifyCost}。`;
+  if (note) note.innerHTML = `✅ <strong>执行完成（${planName}）</strong>：${n}个MCP调用全部成功。场地已取消→室内场地已预订→工坊已确认→同行人已通知。总耗时${elapsed}秒，编排费用¥${inc.notifyCost}。`;
   setStatus('已完成');
   showToast(`✅ Plan ${planName} 执行完成`);
+
+  // Plan B 改订下单入口：编排完成后可对「改订/预订」类步骤统一下单
+  const bookItems = planBBookingItems(inc, tripState.dest || '目的地');
+  if (bookItems.length && !document.getElementById('planbBookBtn')) {
+    const bb = document.createElement('button');
+    bb.id = 'planbBookBtn';
+    bb.className = 'book-cta b';
+    bb.style.marginTop = '12px';
+    bb.innerHTML = `🧾 确认改订下单 Plan ${planName}（${bookItems.length}项）`;
+    bb.addEventListener('click', () => openBookingSheet({
+      plan: 'B',
+      dest: tripState.dest, days: tripState.days, from: tripState.from,
+      title: `应急改订下单 — Plan ${planName}`,
+      items: bookItems,
+    }));
+    btn.parentElement.appendChild(bb);
+  }
 }
 
 // ============================================
@@ -1935,6 +2021,155 @@ function initMemory() {
   });
   renderMemoryPage();
   renderTripMemory();   // 同步刷新当前行程记忆面板
+}
+
+// ============================================
+// 下单模块（Plan A / Plan B 共用）
+// --------------------------------------------
+// 后端为接口占位（stub）：/api/booking/quote → /api/booking/create → /api/booking/order/:id
+// 契约按携程商旅/开放平台真实下单平台设计，全程带「演示下单·接口占位」标识。
+// ============================================
+const BOOK_ICON = { flight: '✈️', hotel: '🏨', activity: '🎫', transfer: '🚌', rebook: '🔄' };
+
+function yuan(n) { return '¥' + (Math.round(Number(n) || 0)).toLocaleString('zh-CN'); }
+
+// 打开下单面板。opts:
+//   { plan:'A'|'B', title, dest, days, from, partySize, items?（传入则跳过报价）}
+async function openBookingSheet(opts = {}) {
+  const plan = opts.plan || 'A';
+  const dest = opts.dest || (tripState && tripState.dest) || '目的地';
+  const days = opts.days || (tripState && tripState.days) || 5;
+  const from = opts.from || (tripState && tripState.from) || '';
+  const partySize = opts.partySize || 1;
+
+  // 遮罩 + 面板骨架
+  const mask = document.createElement('div');
+  mask.className = 'booking-mask';
+  mask.innerHTML = `
+    <div class="booking-sheet" role="dialog" aria-modal="true">
+      <div class="booking-head">
+        <div>
+          <span class="booking-plan-badge ${plan === 'B' ? 'b' : 'a'}">Plan ${plan}</span>
+          <h3>${esc(opts.title || (plan === 'B' ? '应急改订下单' : '行程下单预订'))}</h3>
+        </div>
+        <button class="booking-close" aria-label="关闭">✕</button>
+      </div>
+      <div class="booking-stub-note">🔌 演示下单 · 接口占位（携程问道为攻略型 API，不含下单；真实出票需接入携程商旅/开放平台）</div>
+      <div class="booking-body"><p class="loading">⏳ 正在获取报价…</p></div>
+      <div class="booking-foot" style="display:none;">
+        <div class="booking-total">合计预估 <b class="booking-total-num">—</b> <span class="booking-est">预估价·非实时</span></div>
+        <button class="btn primary booking-submit">✅ 确认下单</button>
+      </div>
+    </div>`;
+  document.body.appendChild(mask);
+  const close = () => mask.remove();
+  mask.querySelector('.booking-close').addEventListener('click', close);
+  mask.addEventListener('click', e => { if (e.target === mask) close(); });
+
+  const body = mask.querySelector('.booking-body');
+  const foot = mask.querySelector('.booking-foot');
+
+  // 取报价：优先用传入 items，否则调 quote 接口
+  let quote;
+  try {
+    if (Array.isArray(opts.items) && opts.items.length) {
+      const total = opts.items.reduce((s, it) => s + (Number(it.subtotal) || 0), 0);
+      quote = { items: opts.items, total, dest, days, from, partySize, estimate: true };
+    } else {
+      const r = await fetch('/api/booking/quote', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ plan, dest, days, from, partySize }),
+      });
+      if (!r.ok) throw new Error('quote failed');
+      quote = await r.json();
+    }
+  } catch (e) {
+    body.innerHTML = '<p class="booking-err">⚠️ 报价接口未就绪，请稍后重试。</p>';
+    return;
+  }
+
+  body.innerHTML = `
+    <div class="booking-trip">🧭 ${from ? esc(from) + ' → ' : ''}<b>${esc(dest)}</b> · ${esc(String(days))}天 · ${partySize}人</div>
+    <div class="booking-items">
+      ${quote.items.map(it => `
+        <div class="booking-item">
+          <span class="bi-ic">${BOOK_ICON[it.type] || '•'}</span>
+          <div class="bi-main">
+            <strong>${esc(it.title)}</strong>
+            <span class="bi-sub">${yuan(it.unit)} × ${esc(String(it.qty))} ${esc(it.unitLabel || '')}${it.provider ? ' · <code>' + esc(it.provider) + '</code>' : ''}</span>
+          </div>
+          <span class="bi-price">${yuan(it.subtotal)}</span>
+        </div>`).join('')}
+    </div>`;
+  foot.style.display = '';
+  foot.querySelector('.booking-total-num').textContent = yuan(quote.total);
+
+  foot.querySelector('.booking-submit').addEventListener('click', async function () {
+    this.disabled = true;
+    this.textContent = '⏳ 下单中…';
+    try {
+      const r = await fetch('/api/booking/create', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ plan, dest, days, from, partySize, items: quote.items, total: quote.total }),
+      });
+      if (!r.ok) throw new Error('create failed');
+      const order = await r.json();
+      body.innerHTML = `
+        <div class="booking-success">
+          <div class="bs-check">✅</div>
+          <h3>下单成功（演示）</h3>
+          <div class="bs-row"><span>订单号</span><b>${esc(order.orderId)}</b></div>
+          <div class="bs-row"><span>行程</span><b>${from ? esc(from) + ' → ' : ''}${esc(dest)} · ${esc(String(days))}天</b></div>
+          <div class="bs-row"><span>金额</span><b>${yuan(order.total)}</b></div>
+          <div class="bs-row"><span>状态</span><b class="bs-status">待支付 PENDING_PAYMENT</b></div>
+          <p class="bs-note">🔌 ${esc(order.note || '')}</p>
+        </div>`;
+      foot.innerHTML = '<button class="btn primary booking-done">完成</button>';
+      foot.querySelector('.booking-done').addEventListener('click', close);
+      showToast('✅ 下单成功（演示）· 单号 ' + order.orderId);
+      if (typeof opts.onBooked === 'function') opts.onBooked(order);
+    } catch (e) {
+      this.disabled = false;
+      this.textContent = '✅ 确认下单';
+      showToast('⚠️ 下单失败，请重试');
+    }
+  });
+}
+
+// 在一条 AI 消息气泡下追加「下单」入口。
+//   plan 'A'：整段行程下单；plan 'B'：应急改订下单（可传 extra.items 指定改订条目）
+function appendBookCta(msgDiv, plan = 'A', extra = {}) {
+  if (!msgDiv || !tripState || !tripState.dest) return;
+  const bubble = msgDiv.querySelector('.msg-bubble');
+  if (!bubble) return;
+  const btn = document.createElement('button');
+  btn.className = 'book-cta' + (plan === 'B' ? ' b' : '');
+  const label = plan === 'B'
+    ? `🧾 确认改订下单 Plan B${extra.items ? '（' + extra.items.length + '项）' : ''}`
+    : `🧾 下单预订 Plan A（${esc(tripState.dest)}${tripState.days ? ' · ' + tripState.days + '天' : ''}）`;
+  btn.innerHTML = label;
+  btn.addEventListener('click', () => openBookingSheet({
+    plan, dest: tripState.dest, days: tripState.days, from: tripState.from,
+    title: plan === 'B' ? `应急改订下单 — ${tripState.dest}` : `行程下单预订 — ${tripState.dest}`,
+    items: extra.items,
+  }));
+  bubble.appendChild(btn);
+  scrollChat();
+}
+
+// 由 Plan B 突发方案构造下单条目（改订类）
+function planBBookingItems(inc, dest) {
+  const steps = (inc && inc.orphSteps) || [];
+  return steps
+    .filter(s => /预订|改签|create_booking|book_local/.test((s.name || '') + (s.api || '')))
+    .map(s => ({
+      type: 'rebook',
+      title: s.name,
+      unit: (typeof s.cost === 'string' ? Number(s.cost.replace(/[^\d.]/g, '')) : Number(s.cost)) || 0,
+      qty: 1, unitLabel: '项',
+      provider: (s.api || '').split(':')[0] || 'rebook',
+      subtotal: (typeof s.cost === 'string' ? Number(s.cost.replace(/[^\d.]/g, '')) : Number(s.cost)) || 0,
+    }));
 }
 
 // ============================================

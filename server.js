@@ -217,6 +217,118 @@ app.post('/api/planb/orchestrate-cost', async (req, res) => {
   }
 });
 
+// ============================================================
+// 下单接口占位（Booking Stub）
+// ------------------------------------------------------------
+// 【重要】携程「问道」(Wendao) 是攻略型 API，只返回文本攻略，
+//   不含库存确认 / 订单 / 支付链路，无法直接下单。
+// 真实下单需对接以下任一渠道（均需单独申请资质与密钥）：
+//   1. 携程商旅 MCP        openapi.ctripbiz.com   （含一键下单等工具）
+//   2. 携程旅游开放平台     ttdstp.ctrip.com       （门票/活动/租车 下单·退款·核销）
+//   3. 第三方 RollingGo MCP （实时库存 + 下单闭环）
+// 下面三个接口按真实下单平台的契约设计（quote→create→order 查询），
+//   当前为 stub（mock:true），拿到真实密钥后把 TODO 处替换为真实调用即可。
+// ============================================================
+
+// 简单内存订单表（演示用；生产应落库 + 幂等键）
+const BOOKING_ORDERS = new Map();
+function genOrderId() {
+  const d = new Date();
+  const ymd = `${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, '0')}${String(d.getDate()).padStart(2, '0')}`;
+  const rnd = Math.random().toString(36).slice(2, 8).toUpperCase();
+  return `TM${ymd}${rnd}`;
+}
+
+// 透明预估模型：无真实报价接口时，按 目的地/天数/出发地 稳定派生「预估价」。
+// 明确标注 estimate:true，前端会显示「预估·非实时报价」，不会当作真实成交价。
+function estimateItems({ dest = '目的地', days = 5, from = '', partySize = 1 }) {
+  days = (days && days > 0) ? days : 5;
+  partySize = (partySize && partySize > 0) ? partySize : 1;
+  const seed = hashStr(dest + '|' + from);
+  const nights = Math.max(1, days - 1);
+  // 机票：往返，按目的地稳定派生中位价（¥1200–2800/人）
+  const flightUnit = 1200 + (seed % 1600);
+  // 酒店：¥300–800/晚（贴合记忆中「民宿/精品 300-500」的量级）
+  const hotelUnit = 300 + ((seed >> 3) % 500);
+  // 活动/门票：按天数派生，¥120–360/天
+  const actUnit = 120 + ((seed >> 6) % 240);
+  const items = [
+    {
+      type: 'flight',
+      title: `${from ? from + ' ↔ ' : ''}${dest} 往返机票`,
+      unit: flightUnit, qty: partySize, unitLabel: '人（往返）',
+      subtotal: flightUnit * partySize,
+      provider: 'ctrip.flight', bookApi: 'POST /flight/order',
+    },
+    {
+      type: 'hotel',
+      title: `${dest} 住宿 ${nights} 晚`,
+      unit: hotelUnit, qty: nights, unitLabel: '晚',
+      subtotal: hotelUnit * nights,
+      provider: 'ctrip.hotel', bookApi: 'POST /hotel/order',
+    },
+    {
+      type: 'activity',
+      title: `${dest} 当地活动/门票 ${days} 天`,
+      unit: actUnit, qty: days, unitLabel: '天',
+      subtotal: actUnit * days,
+      provider: 'ctrip.ttd', bookApi: 'POST /ttd/order',
+    },
+  ];
+  const total = items.reduce((s, it) => s + it.subtotal, 0);
+  return { items, total };
+}
+
+// ① 报价：给定行程要素，返回可下单条目 + 预估总价
+app.post('/api/booking/quote', (req, res) => {
+  const b = req.body || {};
+  const dest = b.dest || '目的地';
+  const days = Number(b.days) || 5;
+  const from = b.from || '';
+  const partySize = Number(b.partySize) || 1;
+  // TODO: 接入真实渠道时，改为调用 携程商旅/开放平台 的实时报价接口
+  const { items, total } = estimateItems({ dest, days, from, partySize });
+  res.json({
+    mock: true, provider: 'stub', estimate: true,
+    currency: 'CNY',
+    plan: b.plan || 'A',
+    dest, days, from, partySize,
+    items, total,
+    note: '预估价·非实时报价。真实成交价需对接携程商旅/开放平台下单接口。',
+  });
+});
+
+// ② 下单：创建订单（stub），返回 orderId + 待支付状态
+app.post('/api/booking/create', (req, res) => {
+  const b = req.body || {};
+  const items = Array.isArray(b.items) ? b.items : [];
+  const total = typeof b.total === 'number'
+    ? b.total
+    : items.reduce((s, it) => s + (Number(it.subtotal) || 0), 0);
+  const orderId = genOrderId();
+  const order = {
+    mock: true, provider: 'stub',
+    orderId,
+    plan: b.plan || 'A',
+    dest: b.dest || '', days: b.days || null, from: b.from || '',
+    partySize: b.partySize || 1,
+    items, total, currency: 'CNY',
+    status: 'PENDING_PAYMENT',       // 真实链路：PENDING_PAYMENT→PAID→CONFIRMED
+    createdAt: new Date().toISOString(),
+    note: '演示订单·未对接真实支付。接口契约已就绪，接入携程商旅/开放平台后可真实出票。',
+    // TODO: 真实下单时在此调用渠道 create_order，并写入渠道单号 channelOrderId
+  };
+  BOOKING_ORDERS.set(orderId, order);
+  res.json(order);
+});
+
+// ③ 查单：按 orderId 查询订单状态
+app.get('/api/booking/order/:id', (req, res) => {
+  const order = BOOKING_ORDERS.get(req.params.id);
+  if (!order) return res.status(404).json({ error: 'order_not_found' });
+  res.json(order);
+});
+
 // Serve the prototype (static frontend) at root
 app.use('/assets', express.static(path.join(__dirname, 'assets')));
 app.use(express.static(path.join(__dirname, 'prototype')));
