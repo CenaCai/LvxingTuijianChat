@@ -1163,12 +1163,9 @@ function rEmergency() {
 // Scene: Execute (MCP orchestration)
 // ============================================
 function rExecute() {
-  const steps = [
-    {name:'取消户外课程场地',api:'预订MCP: cancel_booking',cost:'¥0'},
-    {name:'预订大理州博物馆',api:'预订MCP: create_booking',cost:'¥0'},
-    {name:'确认扎染工坊场地',api:'预订MCP: book_local',cost:'¥0'},
-    {name:'通知学员+更新行程',api:'通知MCP: send_wechat',cost:'¥0.75'},
-  ];
+  const trip = tripState || {};
+  const inc = buildIncident(trip.dest || '目的地', trip.days || 5);
+  const steps = inc.orphSteps;
 
   addMsg('ai', `
     <p>好的！激活 <strong>Skill: execute_rebook</strong> → Agent 按依赖关系自动编排 MCP 调用链：</p>
@@ -1222,8 +1219,8 @@ function rExecute() {
   setTimeout(() => {
     addMsg('ai', `
       <p>✅ <strong>全部执行完成！</strong></p>
-      <p style="font-size:11px;color:var(--ink2);">总耗时3.2秒 · 4个MCP调用成功 · 总费用¥0.75</p>
-      <p>15名学员已收到微信通知。</p>
+      <p style="font-size:11px;color:var(--ink2);">总耗时3.2秒 · 4个MCP调用成功 · 总费用¥${inc.notifyCost}</p>
+      <p>同行人已收到行程更新通知。</p>
     `);
     showToast('✅ Plan B1 执行完成');
   }, 2900);
@@ -1233,10 +1230,13 @@ function rExecute() {
 // Other scenes
 // ============================================
 function rPlanB2() {
+  const trip = tripState || {};
+  const dest = trip.dest || '目的地';
+  const inc = buildIncident(dest, trip.days || 5);
   addMsg('ai', `
-    <p><strong>Plan B2 详情：</strong></p>
-    <p>提前1天前往丽江。<br/>大理住宿退1晚(¥150退款) → 丽江加1晚(¥250) → 大巴改签(¥30)。</p>
-    <p>💰 净增费用：约 ¥130<br/>📚 Day 7课程顺延1天，不影响内容。<br/>⚠️ 需要大巴票改签（提前2小时可免费改签）。</p>
+    <p><strong>Plan B2 详情（${esc(dest)}）：</strong></p>
+    <p>提前1天前往邻近城市。<br/>${esc(dest)}住宿退1晚 → 邻城加1晚 → 交通改签。</p>
+    <p>💰 净增费用：约 ¥${inc.b2total}<br/>📚 Day ${inc.hitDay + 1}行程顺延1天，不影响内容。<br/>⚠️ 需要交通票改签（提前2小时可免费改签）。</p>
     <p>相比Plan B1，多了交通改签的麻烦。建议还是 <strong>Plan B1</strong>。</p>
   `);
   addChips(['✅ 还是执行 Plan B1', '📞 联系课程老师确认']);
@@ -1452,6 +1452,11 @@ function buildIncident(dest, days) {
   ];
   const a = alerts[hashStr(dest) % alerts.length];
   const moveDay = Math.min(days, hitDay + 2);
+  // 动态费用模型（演示用）：根据目的地 + 天数稳定派生，贴合当前行程规模
+  const seed = hashStr(dest);
+  const notifyCost = ((seed % 4) + 1) * 0.25;            // 通知步费用：¥0.25 / 0.5 / 0.75 / 1.0
+  const rebookCost = 80 + (seed % 120);                  // B2 酒店退改 + 交通改签：¥80–199
+  const b2total = rebookCost + Math.round(notifyCost);   // B2 净增费用（退改+通知）
   return {
     hitDay,
     alertName: a.name,
@@ -1459,16 +1464,29 @@ function buildIncident(dest, days) {
     b1: `${dest}本地博物馆 + 特色室内工坊，行程平移。户外/水面活动推迟至 Day ${moveDay}。`,
     b1meta: ['💰 无额外费用', '📚 体验目标不变', '⏰ 仅调整顺序'],
     b2: `提前1天前往邻近城市。${dest}退1晚，邻城加1晚。Day ${hitDay + 1}行程顺延。`,
-    b2meta: ['💰 额外 ~320元', '🚌 需改签交通', '🏨 酒店退改'],
+    b2meta: [`💰 净增约 ¥${b2total}`, '🚌 需改签交通', '🏨 酒店退改'],
+    notifyCost,                                          // 编排链通知步费用
+    b2total,                                             // B2 净增费用（用于成本对比）
+    orphSteps: [                                         // 编排链（读取动态费用）
+      { name: '取消受影响户外场地', api: '预订MCP: cancel_booking', cost: '¥0' },
+      { name: `预订${dest}室内替代场地`, api: '预订MCP: create_booking', cost: '¥0' },
+      { name: '确认特色工坊/活动', api: '飞猪MCP: book_local', cost: '¥0' },
+      { name: '通知同行人 + 更新行程', api: '通知MCP: send_wechat', cost: `¥${notifyCost}` },
+    ],
   };
 }
+
+// 当前监控页选中的 Plan B 方案（B1/B2），供 execBtn 读取
+let monSelectedPlan = 'B1';
 
 // 根据当前行程渲染行程监控的「突发状况 + Plan B + 编排链」
 function renderMonitorIncident(dest, days) {
   const body = document.getElementById('incidentBody');
   if (!body) return;
+  monSelectedPlan = 'B1';
   const inc = buildIncident(dest, days);
   const conf = 90 + (hashStr(dest) % 9); // 90-98 稳定置信度
+  const orchestration = inc.orphSteps;
   body.innerHTML = `
     <div class="detect-tag">
       <span class="badge auto">🤖 系统自动检测</span>
@@ -1481,8 +1499,8 @@ function renderMonitorIncident(dest, days) {
         <p>${esc(inc.alertDesc)}</p>
       </div>
     </div>
-    <h4 style="margin:20px 0 12px;font-size:15px;">🤖 AI 推荐 Plan B（综合你的约束）</h4>
-    <div class="plan-card selected">
+    <h4 style="margin:20px 0 12px;font-size:15px;">🤖 AI 推荐 Plan B（综合你的约束 · 点击方案可切换）</h4>
+    <div class="plan-card selected" data-plan="B1">
       <div class="plan-head">
         <strong>⭐ Plan B1 — 室内备选方案</strong>
         <span class="plan-tag rec">推荐</span>
@@ -1490,7 +1508,7 @@ function renderMonitorIncident(dest, days) {
       <p>${esc(inc.b1)}</p>
       <div class="plan-meta">${inc.b1meta.map(m => `<span>${esc(m)}</span>`).join('')}</div>
     </div>
-    <div class="plan-card">
+    <div class="plan-card" data-plan="B2">
       <div class="plan-head">
         <strong>Plan B2 — 提前转移邻近城市</strong>
         <span class="plan-tag alt">备选</span>
@@ -1501,39 +1519,41 @@ function renderMonitorIncident(dest, days) {
     <div class="orch-box">
       <h4>⚙️ 点击确认后，Agent 自动编排 MCP 调用链</h4>
       <div class="orch-chain" id="orchChain">
-        <div class="och-step" data-step="1">
-          <div class="och-num">1</div>
-          <div class="och-body"><strong>取消受影响户外场地</strong><span>预订MCP: cancel_booking · ¥0</span></div>
-          <span class="och-status pending">等待</span>
-        </div>
-        <div class="och-join"><span>并行</span></div>
-        <div class="och-step" data-step="2">
-          <div class="och-num">2</div>
-          <div class="och-body"><strong>预订${esc(dest)}室内替代场地</strong><span>预订MCP: create_booking · ¥0</span></div>
-          <span class="och-status pending">等待</span>
-        </div>
-        <div class="och-join"><span>并行</span></div>
-        <div class="och-step" data-step="3">
-          <div class="och-num">3</div>
-          <div class="och-body"><strong>确认特色工坊/活动</strong><span>飞猪MCP: book_local · ¥0</span></div>
-          <span class="och-status pending">等待</span>
-        </div>
-        <div class="och-join"><span>依赖</span></div>
-        <div class="och-step" data-step="4">
-          <div class="och-num">4</div>
-          <div class="och-body"><strong>通知同行人 + 更新行程</strong><span>通知MCP: send_wechat · ¥0.75</span></div>
-          <span class="och-status pending">等待</span>
-        </div>
+        ${orchestration.map((s, i) => `
+          <div class="och-step" data-step="${i + 1}">
+            <div class="och-num">${i + 1}</div>
+            <div class="och-body"><strong>${esc(s.name)}</strong><span>${esc(s.api)} · ${esc(s.cost)}</span></div>
+            <span class="och-status pending">等待</span>
+          </div>
+          ${i < orchestration.length - 1 ? `<div class="och-join"><span>${i < 1 ? '并行' : '依赖'}</span></div>` : ''}
+        `).join('')}
       </div>
       <div class="orch-summary">
-        <span>总费用 ¥0.75</span><span>预计 ≈12秒</span><span>需授权：是</span>
+        <span>总费用 ${esc('¥' + inc.notifyCost)}</span><span>预计 ≈12秒</span><span>需授权：是</span>
       </div>
     </div>
-    <button class="btn primary full" id="execBtn" onclick="executePlanB()">
-      ✅ 确认执行 Plan B1 — 授权 Agent 自动编排以上 4 步
+    <button class="btn primary full" id="execBtn">
+      ✅ 确认执行 Plan B1 — 授权 Agent 自动编排以上 ${orchestration.length} 步
     </button>
     <p class="safe-note" id="execNote">🔐 以上为非支付类操作。涉及退款/扣款将单独请求授权。</p>
   `;
+
+  // Plan 卡片点击切换选中
+  body.querySelectorAll('.plan-card').forEach(card => {
+    card.addEventListener('click', () => {
+      body.querySelectorAll('.plan-card').forEach(c => c.classList.remove('selected'));
+      card.classList.add('selected');
+      monSelectedPlan = card.getAttribute('data-plan');
+      const b = document.getElementById('execBtn');
+      if (b && !b.disabled) {
+        b.textContent = `✅ 确认执行 ${monSelectedPlan} — 授权 Agent 自动编排以上 ${orchestration.length} 步`;
+      }
+    });
+  });
+
+  // 执行按钮（动态绑定，重渲染后依然有效）
+  const execBtn = document.getElementById('execBtn');
+  if (execBtn) execBtn.addEventListener('click', () => executePlanB(monSelectedPlan, orchestration.length));
 }
 
 // Live query (real Ctrip 问道)
@@ -1556,12 +1576,14 @@ function initMonitor() {
   renderMonitorTrip();   // 首次加载即按已保存行程渲染
 }
 
-// Execute orchestration（全局函数，供 execBtn onclick 调用；监控页重渲染后依然有效）
-async function executePlanB() {
+// Execute orchestration（供监控页 execBtn 调用；plan=当前选中方案，totalSteps=编排链步数）
+async function executePlanB(plan, totalSteps) {
   const btn = document.getElementById('execBtn');
   if (!btn || btn.disabled) return;
+  const planName = plan || monSelectedPlan || 'B1';
+  const n = totalSteps || 4;
   btn.disabled = true;
-  btn.textContent = '⏳ Agent 编排中...';
+  btn.textContent = `⏳ Agent 编排中（${planName}）...`;
   setStatus('执行中...', true);
 
   const steps = document.querySelectorAll('#orchChain .och-step');
@@ -1575,23 +1597,24 @@ async function executePlanB() {
   }, delay));
 
   await animate(steps[0], 'active', 300);
-  btn.textContent = '⏳ 步骤 1/4...';
+  btn.textContent = `⏳ 步骤 1/${n}...`;
   await animate(steps[0], 'done', 600);
 
-  btn.textContent = '⏳ 步骤 2-3/4(并行)...';
+  btn.textContent = `⏳ 步骤 2-3/${n}(并行)...`;
   await Promise.all([animate(steps[1],'active',200), animate(steps[2],'active',200)]);
   await Promise.all([animate(steps[1],'done',500), animate(steps[2],'done',500)]);
 
-  btn.textContent = '⏳ 步骤 4/4...';
+  btn.textContent = `⏳ 步骤 ${n}/${n}...`;
   await animate(steps[3], 'active', 200);
   await animate(steps[3], 'done', 500);
 
   btn.textContent = '✅ 全部执行完成';
   btn.style.background = '#34c759';
+  const inc = buildIncident(tripState.dest || '目的地', tripState.days || 5);
   const note = document.getElementById('execNote');
-  if (note) note.innerHTML = '✅ <strong>执行完成</strong>：4个MCP调用全部成功。场地已取消→室内场地已预订→工坊已确认→同行人已通知。总耗时3.2秒，费用¥0.75。';
+  if (note) note.innerHTML = `✅ <strong>执行完成（${planName}）</strong>：${n}个MCP调用全部成功。场地已取消→室内场地已预订→工坊已确认→同行人已通知。总耗时3.2秒，费用¥${inc.notifyCost}。`;
   setStatus('已完成');
-  showToast('✅ Plan B1 执行完成');
+  showToast(`✅ Plan ${planName} 执行完成`);
 }
 
 // ============================================
