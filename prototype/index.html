@@ -321,7 +321,7 @@
         <div class="kb-actions">
           <button class="btn" id="kbReingestBtn">🔄 重新录入知识库</button>
         </div>
-        <p class="muted mem-hint" id="kbHint">知识库由后端本地 TF-IDF 向量引擎检索，无需联网模型；已录入你的「旅行平台基础QA」，对话时会自动检索并作为官方口径注入 AI。</p>
+        <p class="muted mem-hint" id="kbHint">知识库优先由 Haystack 密集向量（语义）引擎检索，Python 服务离线时自动回退本地 TF-IDF；已录入你的「旅行平台基础QA」，对话时会自动检索并作为官方口径注入 AI。</p>
       </div>
     </section>
 

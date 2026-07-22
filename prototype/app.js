@@ -1578,7 +1578,14 @@ async function renderKbPanel() {
     if (!r.ok) { stat.innerHTML = '⚠️ 知识库状态获取失败'; return; }
     const d = await r.json();
     const cats = Object.keys(d.categories || {}).length;
-    stat.innerHTML = `已录入 <b>${d.count}</b> 条问答 · 覆盖 <b>${cats}</b> 个业务分类`;
+    const sem = d.semantic;
+    let engineLine = '';
+    if (sem && sem.available) {
+      engineLine = `<span class="kb-engine on">🟢 语义向量引擎在线 · ${esc(sem.model || '')} · ${sem.count} 条</span>`;
+    } else {
+      engineLine = `<span class="kb-engine off">🟡 语义引擎离线，已回退本地 TF-IDF</span>`;
+    }
+    stat.innerHTML = `已录入 <b>${d.count}</b> 条问答 · 覆盖 <b>${cats}</b> 个业务分类<br>${engineLine}`;
   } catch (e) {
     stat.innerHTML = '⚠️ 知识库服务未连接（对话仍可用，仅离线）';
   }
@@ -1593,7 +1600,8 @@ function initKb() {
     try {
       const r = await fetch('/api/kb/reingest', { method: 'POST' });
       const d = await r.json();
-      btn.textContent = `✅ 已录入 ${d.added || 0} 条`;
+      const semNote = d.semanticReloaded ? ' · 语义库已同步' : '';
+      btn.textContent = `✅ 已录入 ${d.added || 0} 条${semNote}`;
     } catch (e) {
       btn.textContent = '⚠️ 录入失败';
     }

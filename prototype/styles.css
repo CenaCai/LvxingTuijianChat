@@ -1135,6 +1135,9 @@ a { color: var(--blue); text-decoration: none; }
 .kb-box h3 { font-size: 15px; margin: 0 0 10px; }
 .kb-stat { font-size: 13px; color: var(--ink, #334155); margin-bottom: 12px; }
 .kb-stat b { color: #6d28d9; font-size: 15px; }
+.kb-engine { display: inline-block; margin-top: 6px; font-size: 12px; padding: 2px 8px; border-radius: 999px; }
+.kb-engine.on { background: #dcfce7; color: #15803d; }
+.kb-engine.off { background: #fef9c3; color: #a16207; }
 .kb-actions { display: flex; gap: 8px; margin-bottom: 4px; }
 .kb-actions .btn { padding: 7px 14px; font-size: 12.5px; background: #f5f3ff; border-color: #ddd6fe; color: #6d28d9; }
 .kb-actions .btn:hover:not(:disabled) { background: #ede9fe; }
