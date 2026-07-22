@@ -209,14 +209,14 @@ function buildTimelinePhases(dest, days) {
 // ============================================
 // View switching
 // ============================================
-function switchView(id) {
+async function switchView(id) {
   views.forEach(v => v.classList.toggle('is-visible', v.id === `view-${id}`));
   navItems.forEach(n => n.classList.toggle('is-active', n.dataset.view === id));
-  if (id === 'monitor') renderMonitorTrip();   // 切到行程监控时按最新 chat 行程刷新
+  if (id === 'monitor') await renderMonitorTrip();   // 切到行程监控时按最新 chat 行程刷新
   if (id === 'memory') renderTripMemory();     // 切到记忆中心时按最新行程刷新当前行程记忆
 }
 
-navItems.forEach(n => n.addEventListener('click', () => switchView(n.dataset.view)));
+navItems.forEach(n => n.addEventListener('click', async () => await switchView(n.dataset.view)));
 
 // ============================================
 // Toast & Status
@@ -267,13 +267,13 @@ function addChips(labels) {
   div.innerHTML = `<div class="msg-avatar">🤖</div><div class="msg-bubble"><div class="quick-chips">${chipsHtml}</div></div>`;
   chatMessages.appendChild(div);
   // Bind click
-  div.querySelectorAll('.chip').forEach(c => c.addEventListener('click', () => handleChip(c.textContent)));
+  div.querySelectorAll('.chip').forEach(c => c.addEventListener('click', async () => await handleChip(c.textContent)));
   scrollChat();
 }
 
-function handleChip(label) {
+async function handleChip(label) {
   if (label.includes('执行 Plan B1') || label.includes('执行Plan B1')) sendAsUser('就Plan B1，帮我执行');
-  else if (label.includes('Plan B2') || label.includes('查看 Plan B2')) aiRespond('planb2');
+  else if (label.includes('Plan B2') || label.includes('查看 Plan B2')) await aiRespond('planb2');
   else if (label.includes('证据')) aiRespond('evidence');
   else if (label.includes('预算')) sendAsUser('帮我做预算分配');
   else if (label.includes('路线') || label.includes('交通')) sendAsUser('帮我规划城市间的交通路线');
@@ -293,7 +293,7 @@ document.querySelectorAll('#chatMessages .chip').forEach(c => {
 function sendAsUser(text) {
   addMsg('user', `<p>${esc(text)}</p>`);
   const tid = addTyping();
-  setTimeout(() => { remTyping(tid); aiRespond(detect(text), text); }, 700 + Math.random() * 500);
+  setTimeout(async () => { remTyping(tid); await aiRespond(detect(text), text); }, 700 + Math.random() * 500);
 }
 
 function sendMessage() {
@@ -354,13 +354,13 @@ function detect(text) {
 // ============================================
 // AI Respond dispatcher
 // ============================================
-function aiRespond(scene, text) {
+async function aiRespond(scene, text) {
   switch (scene) {
     case 'europe': rEurope(text); break;
     case 'compare': rCompare(); break;
-    case 'emergency': rEmergency(); break;
-    case 'execute': rExecute(); break;
-    case 'planb2': rPlanB2(); break;
+    case 'emergency': await rEmergency(); break;
+    case 'execute': await rExecute(); break;
+    case 'planb2': await rPlanB2(); break;
     case 'evidence': rEvidence(); break;
     case 'budget': rBudget(); break;
     case 'memory': rMemory(); break;
@@ -906,7 +906,7 @@ async function aiRespondReal(text) {
     }
     if (tripChanged && tripState && tripState.dest) {
       answer += `<div class="mem-noted trip-noted">🛡️ 已同步「行程监控」：<b>${esc(tripState.dest)}${tripState.days ? ' · ' + tripState.days + '天' : ''}</b>，可在左侧「行程监控」查看动态时间线。</div>`;
-      renderMonitorTrip();
+      await renderMonitorTrip();
     }
     if (kbResults && kbResults.length && kbUseful) {
       const display = kbResults.filter(k => (k.score || 0) >= 0.10).slice(0, 3);
@@ -934,7 +934,7 @@ async function aiRespondReal(text) {
     addMsg('ai', answer);
   } else {
     addMsg('ai', `<p>⚠️ 暂时连不上 AI 知识引擎，已回退到本地演示回复。</p>`);
-    aiRespond(scene === 'route' || scene === 'guide' ? 'general' : scene, text);
+    await aiRespond(scene === 'route' || scene === 'guide' ? 'general' : scene, text);
   }
 }
 
@@ -1123,11 +1123,16 @@ function rCompare() {
 // ============================================
 // Scene: Emergency
 // ============================================
-function rEmergency() {
+async function rEmergency() {
   const trip = tripState || {};
   const dest = trip.dest || '目的地';
   const days = trip.days || 5;
   const inc = buildIncident(dest, days);
+  const cost = await fetchPlanBCost(dest, days);
+  inc.notifyCost = cost.notifyCost;
+  inc.rebookCost = cost.rebookCost;
+  inc.b2total = cost.b2total;
+  inc.b2meta = [`💰 净增约 ¥${inc.b2total}`, '🚌 需改签交通', '🏨 酒店退改'];
   addMsg('ai', `
     <p>🚨 <span class="detect-tag-inline auto">🤖 系统自动检测</span></p>
     <p style="font-size:11px;color:var(--ink2);">天气MCP · 15分钟轮询 · 置信度96%</p>
@@ -1159,9 +1164,18 @@ function rEmergency() {
 // ============================================
 // Scene: Execute (MCP orchestration)
 // ============================================
-function rExecute() {
+async function rExecute() {
   const trip = tripState || {};
   const inc = buildIncident(trip.dest || '目的地', trip.days || 5);
+  const cost = await fetchPlanBCost(trip.dest, trip.days);
+  inc.notifyCost = cost.notifyCost;
+  inc.rebookCost = cost.rebookCost;
+  inc.b2total = cost.b2total;
+  inc.orphSteps = cost.steps.map((s, i) => ({
+    name: s.name || inc.orphSteps[i]?.name || '',
+    api: s.api || inc.orphSteps[i]?.api || '',
+    cost: '¥' + s.cost,
+  }));
   const steps = inc.orphSteps;
 
   addMsg('ai', `
@@ -1226,10 +1240,12 @@ function rExecute() {
 // ============================================
 // Other scenes
 // ============================================
-function rPlanB2() {
+async function rPlanB2() {
   const trip = tripState || {};
   const dest = trip.dest || '目的地';
   const inc = buildIncident(dest, trip.days || 5);
+  const cost = await fetchPlanBCost(dest, trip.days);
+  inc.b2total = cost.b2total;
   addMsg('ai', `
     <p><strong>Plan B2 详情（${esc(dest)}）：</strong></p>
     <p>提前1天前往邻近城市。<br/>${esc(dest)}住宿退1晚 → 邻城加1晚 → 交通改签。</p>
@@ -1387,7 +1403,7 @@ document.querySelectorAll('.plan-card').forEach(card => {
 });
 
 // 依据 chat 提取的 tripState 动态渲染「行程时间线」
-function renderMonitorTrip() {
+async function renderMonitorTrip() {
   const card = document.getElementById('timelineCard');
   const incidentBody = document.getElementById('incidentBody');
   const incidentHint = document.getElementById('incidentEmptyHint');
@@ -1424,7 +1440,7 @@ function renderMonitorTrip() {
     (from ? `<p class="tl-sub">出发地：${esc(from)} → 目的地：${esc(dest)}</p>` : '') +
     rows +
     `<p class="tl-note">⏱️ 时间线依据你在对话中规划的行程动态生成；天气/航班预警为产品演示。</p>`;
-  renderMonitorIncident(dest, days);
+  await renderMonitorIncident(dest, days);
 }
 
 // 稳定哈希：相同目的地总是映射到同一类突发场景（演示数据稳定可复现）
@@ -1435,6 +1451,48 @@ function hashStr(s) {
 }
 
 // 依据当前行程（目的地 + 天数）生成贴合的突发状况与 Plan B 备选（演示用模拟数据）
+// 从后端接口获取 Plan B 编排链费用；接口异常或未返回时，所有费用默认 0 元
+async function fetchPlanBCost(dest, days) {
+  const safeDest = dest || '目的地';
+  const safeDays = (days && days > 0) ? days : 5;
+  try {
+    const r = await fetch('/api/planb/orchestrate-cost', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ dest: safeDest, days: safeDays }),
+    });
+    if (!r.ok) throw new Error('cost api error');
+    const d = await r.json();
+    const rawSteps = Array.isArray(d.steps) ? d.steps : [];
+    const safeSteps = rawSteps.map(s => ({
+      name: s.name || '',
+      api: s.api || '',
+      cost: typeof s.cost === 'number' ? s.cost : 0,
+    }));
+    while (safeSteps.length < 4) {
+      safeSteps.push({ name: '', api: '', cost: 0 });
+    }
+    return {
+      steps: safeSteps.slice(0, 4),
+      notifyCost: typeof d.notifyCost === 'number' ? d.notifyCost : 0,
+      rebookCost: typeof d.rebookCost === 'number' ? d.rebookCost : 0,
+      b2total: typeof d.b2total === 'number' ? d.b2total : 0,
+    };
+  } catch (e) {
+    return {
+      steps: [
+        { name: '取消受影响户外场地', api: '预订MCP: cancel_booking', cost: 0 },
+        { name: `预订${safeDest}室内替代场地`, api: '预订MCP: create_booking', cost: 0 },
+        { name: '确认特色工坊/活动', api: '飞猪MCP: book_local', cost: 0 },
+        { name: '通知同行人 + 更新行程', api: '通知MCP: send_wechat', cost: 0 },
+      ],
+      notifyCost: 0,
+      rebookCost: 0,
+      b2total: 0,
+    };
+  }
+}
+
 function buildIncident(dest, days) {
   dest = dest || '目的地';
   days = (days && days > 0) ? days : 5;
@@ -1447,11 +1505,6 @@ function buildIncident(dest, days) {
   ];
   const a = alerts[hashStr(dest) % alerts.length];
   const moveDay = Math.min(days, hitDay + 2);
-  // 动态费用模型（演示用）：根据目的地 + 天数稳定派生，贴合当前行程规模
-  const seed = hashStr(dest);
-  const notifyCost = ((seed % 4) + 1) * 0.25;            // 通知步费用：¥0.25 / 0.5 / 0.75 / 1.0
-  const rebookCost = 80 + (seed % 120);                  // B2 酒店退改 + 交通改签：¥80–199
-  const b2total = rebookCost + Math.round(notifyCost);   // B2 净增费用（退改+通知）
   return {
     hitDay,
     alertName: a.name,
@@ -1459,14 +1512,16 @@ function buildIncident(dest, days) {
     b1: `${dest}本地博物馆 + 特色室内工坊，行程平移。户外/水面活动推迟至 Day ${moveDay}。`,
     b1meta: ['💰 无额外费用', '📚 体验目标不变', '⏰ 仅调整顺序'],
     b2: `提前1天前往邻近城市。${dest}退1晚，邻城加1晚。Day ${hitDay + 1}行程顺延。`,
-    b2meta: [`💰 净增约 ¥${b2total}`, '🚌 需改签交通', '🏨 酒店退改'],
-    notifyCost,                                          // 编排链通知步费用
-    b2total,                                             // B2 净增费用（用于成本对比）
-    orphSteps: [                                         // 编排链（读取动态费用）
+    b2meta: ['💰 净增约 ¥0', '🚌 需改签交通', '🏨 酒店退改'],
+    // 费用字段先默认 0，由 fetchPlanBCost 注入后覆盖
+    notifyCost: 0,
+    rebookCost: 0,
+    b2total: 0,
+    orphSteps: [
       { name: '取消受影响户外场地', api: '预订MCP: cancel_booking', cost: '¥0' },
       { name: `预订${dest}室内替代场地`, api: '预订MCP: create_booking', cost: '¥0' },
       { name: '确认特色工坊/活动', api: '飞猪MCP: book_local', cost: '¥0' },
-      { name: '通知同行人 + 更新行程', api: '通知MCP: send_wechat', cost: `¥${notifyCost}` },
+      { name: '通知同行人 + 更新行程', api: '通知MCP: send_wechat', cost: '¥0' },
     ],
   };
 }
@@ -1475,7 +1530,7 @@ function buildIncident(dest, days) {
 let monSelectedPlan = 'B1';
 
 // 根据当前行程渲染行程监控的「突发状况 + Plan B + 编排链」
-function renderMonitorIncident(dest, days) {
+async function renderMonitorIncident(dest, days) {
   const body = document.getElementById('incidentBody');
   if (!body) return;
   monSelectedPlan = 'B1';
@@ -1509,7 +1564,7 @@ function renderMonitorIncident(dest, days) {
         <span class="plan-tag alt">备选</span>
       </div>
       <p>${esc(inc.b2)}</p>
-      <div class="plan-meta">${inc.b2meta.map(m => `<span>${esc(m)}</span>`).join('')}</div>
+      <div class="plan-meta"><span class="plan-b2-cost">${esc('💰 净增约 ¥' + inc.b2total)}</span><span>🚌 需改签交通</span><span>🏨 酒店退改</span></div>
     </div>
     <div class="orch-box">
       <h4>⚙️ 点击确认后，Agent 自动编排 MCP 调用链</h4>
@@ -1517,14 +1572,14 @@ function renderMonitorIncident(dest, days) {
         ${orchestration.map((s, i) => `
           <div class="och-step" data-step="${i + 1}">
             <div class="och-num">${i + 1}</div>
-            <div class="och-body"><strong>${esc(s.name)}</strong><span>${esc(s.api)} · ${esc(s.cost)}</span></div>
+            <div class="och-body"><strong>${esc(s.name)}</strong><span>${esc(s.api)} · <span class="och-cost">${esc(s.cost)}</span></span></div>
             <span class="och-status pending">等待</span>
           </div>
           ${i < orchestration.length - 1 ? `<div class="och-join"><span>${i < 1 ? '并行' : '依赖'}</span></div>` : ''}
         `).join('')}
       </div>
       <div class="orch-summary">
-        <span>总费用 ${esc('¥' + inc.notifyCost)}</span><span>预计 ≈12秒</span><span>需授权：是</span>
+        <span>总费用 <span class="orch-summary-cost">${esc('¥' + inc.notifyCost)}</span></span><span>预计 ≈12秒</span><span>需授权：是</span>
       </div>
     </div>
     <button class="btn primary full" id="execBtn">
@@ -1549,10 +1604,30 @@ function renderMonitorIncident(dest, days) {
   // 执行按钮（动态绑定，重渲染后依然有效）
   const execBtn = document.getElementById('execBtn');
   if (execBtn) execBtn.addEventListener('click', () => executePlanB(monSelectedPlan, orchestration.length));
+
+  // 调接口获取真实费用，失败或未返回则保持默认 0 元
+  const cost = await fetchPlanBCost(dest, days);
+  inc.notifyCost = cost.notifyCost;
+  inc.rebookCost = cost.rebookCost;
+  inc.b2total = cost.b2total;
+  inc.orphSteps = cost.steps.map((s, i) => ({
+    name: s.name || orchestration[i]?.name || '',
+    api: s.api || orchestration[i]?.api || '',
+    cost: '¥' + s.cost,
+  }));
+  window.__currentIncident = inc;
+
+  body.querySelectorAll('.och-cost').forEach((el, i) => {
+    if (inc.orphSteps[i]) el.textContent = inc.orphSteps[i].cost;
+  });
+  const summaryEl = body.querySelector('.orch-summary-cost');
+  if (summaryEl) summaryEl.textContent = '¥' + inc.notifyCost;
+  const b2El = body.querySelector('.plan-b2-cost');
+  if (b2El) b2El.textContent = '💰 净增约 ¥' + inc.b2total;
 }
 
 // Live query (real Ctrip 问道)
-function initMonitor() {
+async function initMonitor() {
   const input = document.getElementById('monQuery');
   const btn = document.getElementById('monQueryBtn');
   const out = document.getElementById('monitorResult');
@@ -1568,7 +1643,7 @@ function initMonitor() {
   };
   btn.addEventListener('click', go);
   input.addEventListener('keydown', e => { if (e.key === 'Enter') go(); });
-  renderMonitorTrip();   // 首次加载即按已保存行程渲染
+  await renderMonitorTrip();   // 首次加载即按已保存行程渲染
 }
 
 // Execute orchestration（供监控页 execBtn 调用；plan=当前选中方案，totalSteps=编排链步数）
@@ -1605,7 +1680,7 @@ async function executePlanB(plan, totalSteps) {
 
   btn.textContent = '✅ 全部执行完成';
   btn.style.background = '#34c759';
-  const inc = buildIncident(tripState.dest || '目的地', tripState.days || 5);
+  const inc = window.__currentIncident || buildIncident(tripState.dest || '目的地', tripState.days || 5);
   const note = document.getElementById('execNote');
   if (note) note.innerHTML = `✅ <strong>执行完成（${planName}）</strong>：${n}个MCP调用全部成功。场地已取消→室内场地已预订→工坊已确认→同行人已通知。总耗时3.2秒，费用¥${inc.notifyCost}。`;
   setStatus('已完成');
@@ -1690,14 +1765,14 @@ document.getElementById('demoBtn')?.addEventListener('click', async function() {
   addMsg('ai', '<p>🛡️ <strong>Phase 5/6：行程守护</strong> — 系统主动监控+Plan B生成</p>');
   addMsg('user', '<p>（系统通知）大理暴雨橙色预警！</p>');
   await sleep(600);
-  rEmergency();
+  await rEmergency();
   await sleep(1200);
 
   // Phase 6: Execute
   addMsg('ai', '<p>⚡ <strong>Phase 6/6：Skill编排执行</strong> — Agent串联MCP调用链</p>');
   addMsg('user', '<p>就Plan B1，帮我执行！</p>');
   await sleep(600);
-  rExecute();
+  await rExecute();
   await sleep(3500);
 
   setStatus('就绪');

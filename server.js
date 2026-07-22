@@ -170,6 +170,53 @@ app.post('/api/kb/reingest', async (req, res) => {
   }
 });
 
+// ---- Plan B 编排链费用（对接 MCP 计价服务；未接入时返回默认 0）----
+function hashStr(s) {
+  let h = 0;
+  for (let i = 0; i < (s || '').length; i++) h = (h * 31 + s.charCodeAt(i)) >>> 0;
+  return h;
+}
+app.post('/api/planb/orchestrate-cost', async (req, res) => {
+  const dest = (req.body && req.body.dest) || '目的地';
+  const days = Number(req.body && req.body.days) || 5;
+  try {
+    // TODO: 接入真实 MCP 价格服务，按 dest/days/plan 返回各步费用
+    // 当前为演示模型：前 3 步取消/预订/确认默认 ¥0；第 4 步通知费按目的地稳定派生
+    const seed = hashStr(dest);
+    const notifyCost = ((seed % 4) + 1) * 0.25;          // ¥0.25 / 0.5 / 0.75 / 1.0
+    const rebookCost = 80 + (seed % 120);                // B2 酒店退改 + 交通改签 ¥80–199
+    const b2total = rebookCost + Math.round(notifyCost); // B2 净增费用
+    res.json({
+      dest,
+      days,
+      steps: [
+        { name: '取消受影响户外场地', api: '预订MCP: cancel_booking', cost: 0 },
+        { name: `预订${dest}室内替代场地`, api: '预订MCP: create_booking', cost: 0 },
+        { name: '确认特色工坊/活动', api: '飞猪MCP: book_local', cost: 0 },
+        { name: '通知同行人 + 更新行程', api: '通知MCP: send_wechat', cost: notifyCost },
+      ],
+      notifyCost,
+      rebookCost,
+      b2total,
+    });
+  } catch (e) {
+    // 任何异常都返回全 0 兜底，避免前端卡住
+    res.json({
+      dest,
+      days,
+      steps: [
+        { name: '取消受影响户外场地', api: '预订MCP: cancel_booking', cost: 0 },
+        { name: `预订${dest}室内替代场地`, api: '预订MCP: create_booking', cost: 0 },
+        { name: '确认特色工坊/活动', api: '飞猪MCP: book_local', cost: 0 },
+        { name: '通知同行人 + 更新行程', api: '通知MCP: send_wechat', cost: 0 },
+      ],
+      notifyCost: 0,
+      rebookCost: 0,
+      b2total: 0,
+    });
+  }
+});
+
 // Serve the prototype (static frontend) at root
 app.use('/assets', express.static(path.join(__dirname, 'assets')));
 app.use(express.static(path.join(__dirname, 'prototype')));
