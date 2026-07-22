@@ -272,10 +272,7 @@ function addChips(labels) {
 }
 
 function handleChip(label) {
-  if (label.includes('欧洲') || label.includes('游学')) sendAsUser('我想规划2个月欧洲游学，预算8万元');
-  else if (label.includes('新疆') || label.includes('云南') || label.includes('对比')) sendAsUser('新疆15天自驾 vs 云南15天游学，预算1.2万');
-  else if (label.includes('突发') || label.includes('Plan B') || label.includes('状况')) sendAsUser('大理暴雨预警，Day 6户外课程无法进行');
-  else if (label.includes('执行 Plan B1') || label.includes('执行Plan B1')) sendAsUser('就Plan B1，帮我执行');
+  if (label.includes('执行 Plan B1') || label.includes('执行Plan B1')) sendAsUser('就Plan B1，帮我执行');
   else if (label.includes('Plan B2') || label.includes('查看 Plan B2')) aiRespond('planb2');
   else if (label.includes('证据')) aiRespond('evidence');
   else if (label.includes('预算')) sendAsUser('帮我做预算分配');
@@ -1290,9 +1287,7 @@ function rGeneral() {
   addMsg('ai', `
     <p>收到！我理解你想规划旅行 🗺️</p>
     <p>可以多告诉我一些细节：目的地、时间、预算、同行人数、喜欢的节奏？</p>
-    <p>或者直接选一个场景体验 👇</p>
   `);
-  addChips(['🇪🇺 2个月欧洲游学', '⚖️ 新疆 vs 云南对比', '🛡️ 突发状况 Plan B']);
 }
 
 // ============================================
