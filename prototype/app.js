@@ -317,6 +317,17 @@ function sendMessage() {
 
   setTimeout(async () => {
     remTyping(tid);
+    // 显式「重新设定 / 重置 / 清空记忆」意图：清空全部记忆设定
+    if (isResetIntent(text)) {
+      const n = clearAllMemories();
+      clarifyState.active = false;
+      addMsg('ai', `<p>🧹 已清空全部 <b>${n}</b> 条记忆设定，记忆中心现已为空。你可以重新描述偏好（如「我吃得清淡」「预算每天1000」），我会自动存入；也可在「🧠 记忆中心」手动添加。</p>`);
+      isTyping = false;
+      sendBtn.disabled = false;
+      setStatus('就绪');
+      chatInput.focus();
+      return;
+    }
     if (clarifyState.active) {
       await handleClarifyReply(text);   // 处于澄清追问模式，解析用户补充信息
     } else {
@@ -963,7 +974,7 @@ function renderClarificationCard(originalText, tripMems, stageWrap) {
       <button class="btn btn-primary clar-confirm">✅ 沿用这些设定</button>
       <button class="btn clar-reject">🔄 重新设定</button>
     </div>
-    <p class="clarify-tip">选择“重新设定”后，我会用聊天方式问你几个简单问题（去几天、出差还是旅行、预算等），再给出建议。</p>
+    <p class="clarify-tip">选择“重新设定”后，会<b>清空全部记忆</b>并用聊天方式重新问你几个简单问题（去几天、出差还是旅行、预算等），再给出建议。</p>
   `;
   stageWrap.appendChild(card);
   scrollChat();
@@ -977,6 +988,7 @@ function renderClarificationCard(originalText, tripMems, stageWrap) {
   card.querySelector('.clar-reject').addEventListener('click', () => {
     card.remove();
     addMsg('user', '<p>重新设定</p>');
+    clearAllMemories();   // 重新设定 = 清空全部记忆，从零开始
     sendAsUserReject(originalText, tripMems);
   });
 }
@@ -1886,11 +1898,42 @@ function renderMemoryPage() {
     </div>`).join('');
   el.querySelectorAll('.mem-act').forEach(b => b.addEventListener('click', () => {
     const i = +b.dataset.i, act = b.dataset.act;
-    if (act === 'del') extractedMemories.splice(i, 1);
+    if (act === 'del') {
+      if (extractedMemories[i] && extractedMemories[i].locked) {
+        showToast('🔒 该记忆已锁定，无法删除（请先点击「🔓 解锁」）');
+        return;
+      }
+      extractedMemories.splice(i, 1);
+    }
     else if (act === 'lock') extractedMemories[i].locked = !extractedMemories[i].locked;
     saveMemories();
     renderMemoryPage();
   }));
+}
+
+// 清空全部记忆（用户显式「重新设定/重置」时调用；覆盖锁定项，因为属于用户主动整体重置）
+function clearAllMemories() {
+  const n = extractedMemories.length;
+  extractedMemories = [];
+  confirmedTripMemLabels.clear();
+  rejectedTripMemLabels.clear();
+  saveMemories();
+  saveTripLabelState();
+  updateCtxMemory();
+  renderMemoryPage();
+  renderTripMemory();
+  return n;
+}
+
+// 识别聊天中的「重新设定/删除/清空」意图（显式要求清空全部记忆）
+function isResetIntent(text) {
+  const t = (text || '').trim();
+  if (!t) return false;
+  const exact = /^(重新设定|重新设置|重置|清空记忆|清空所有记忆|清空我的记忆|清空全部记忆|清空所有设定|清空全部设定|清空设定|清除记忆|清除所有设定|清掉记忆|全部重来|重置记忆|重置偏好|重置所有偏好|清空我的偏好|删除所有设定|删除记忆|删除所有记忆|删除全部记忆|删掉记忆|删掉所有记忆|去掉记忆|去掉所有记忆|移除记忆|把记忆清空|把偏好重置|全部清空)$/;
+  const verbs = '(重新设定|重新设置|重置|清空|清除|清掉|删除|删掉|去掉|移除)';
+  const nouns = '(记忆|偏好|设定|我的记忆|我的偏好|我的设定|全部记忆|所有记忆|全部偏好|所有偏好|全部设定|所有设定|记忆设定|偏好设定)';
+  const loose = new RegExp(verbs + '.{0,20}' + nouns + '|' + nouns + '.{0,20}' + verbs);
+  return exact.test(t) || loose.test(t);
 }
 
 // 平台知识库面板：展示录入条数 / 分类数，并提供「重新录入」入口
