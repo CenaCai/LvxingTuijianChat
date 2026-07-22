@@ -124,7 +124,8 @@ function cn2num(s) {
 }
 
 // 从用户输入解析行程要素（目的地/天数/出发地），有更新则写入 tripState
-function updateTripFromInput(text) {
+function updateTripFromInput(text, opts) {
+  const options = opts || {};
   const t = text || '';
   let changed = false;
   const trip = tripState || { dest: '', days: 0, from: '', updatedAt: 0 };
@@ -136,10 +137,15 @@ function updateTripFromInput(text) {
     if (dm[2] === '周') n *= 7;
     else if (dm[2] === '个月') n *= 30;
     if (n > 0 && n <= 365 && n !== trip.days) {
-      // 子行程保护：本句在「N天」前又提了其它城市（如「曼谷2天」），视为该城市停留天数，不覆盖总行程天数
-      const before = t.slice(0, dm.index);
-      const otherCity = before.match(/(北京|清迈|曼谷|普吉|东京|大阪|京都|北海道|首尔|济州|巴厘岛|新加坡|新疆|云南|西藏|成都|重庆|三亚|厦门|大理|丽江|香格里拉|青海|甘肃|川西|稻城|冰岛|瑞士|新西兰|欧洲|日本|泰国|越南|摩洛哥)/);
-      const isSubTrip = otherCity && n < (trip.days || 0);
+      // 子行程保护：正常对话中，本句在「N天」前又提了其它城市（如「曼谷2天」），
+      // 且 N 小于当前总天数时，视为该城市停留天数，不覆盖总行程天数。
+      // 澄清模式下用户就是在纠正槽位，关闭此保护。
+      let isSubTrip = false;
+      if (!options.isClarify) {
+        const before = t.slice(0, dm.index);
+        const otherCity = before.match(/(北京|清迈|曼谷|普吉|东京|大阪|京都|北海道|首尔|济州|巴厘岛|新加坡|新疆|云南|西藏|成都|重庆|三亚|厦门|大理|丽江|香格里拉|青海|甘肃|川西|稻城|冰岛|瑞士|新西兰|欧洲|日本|泰国|越南|摩洛哥)/);
+        isSubTrip = otherCity && n < (trip.days || 0);
+      }
       if (!isSubTrip) { trip.days = n; changed = true; }
     }
   }
@@ -662,11 +668,24 @@ async function handleClarifyReply(text) {
 
   const prefs = extractPreferences(text);
   const c = clarifyState.collected;
-  // 如果原始输入已解析出出发地/天数，进入澄清时预填，避免重复询问
-  if (!c.from) c.from = from || ((tripState && tripState.dest === clarifyState.dest) ? tripState.from : '');
-  if (days && !c.days) c.days = days;
-  if (purpose && !c.purpose) c.purpose = purpose;
-  if (budget && !c.budget) c.budget = budget;
+  // 用户在澄清中明确给出的槽位，允许覆盖旧值（支持重新设定/纠正）。
+  // 未给出的槽位才沿用进入澄清时预填的旧值。
+  if (from) c.from = from;
+  else if (!c.from && tripState && tripState.dest === clarifyState.dest) c.from = tripState.from;
+
+  if (days) c.days = days;
+
+  if (purpose) c.purpose = purpose;
+
+  if (budget) c.budget = budget;
+
+  // 澄清输入也同步更新全局 tripState，让左侧「行程监控」实时联动
+  updateTripFromInput(text, { isClarify: true });
+  // 若用户在澄清中切换了目的地，同步到 clarifyState
+  if (tripState && tripState.dest && tripState.dest !== clarifyState.dest) {
+    clarifyState.dest = tripState.dest;
+  }
+
   // 容错：澄清回复只给纯数字（如「5」「5000」）时按槽位语义兜底
   const bareNum = text.replace(/[，。、\s]/g, '').match(/^(\d{1,6})$/);
   if (bareNum) {
