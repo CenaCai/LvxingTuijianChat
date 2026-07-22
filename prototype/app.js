@@ -135,7 +135,13 @@ function updateTripFromInput(text) {
     let n = cn2num(dm[1]);
     if (dm[2] === '周') n *= 7;
     else if (dm[2] === '个月') n *= 30;
-    if (n > 0 && n <= 365 && n !== trip.days) { trip.days = n; changed = true; }
+    if (n > 0 && n <= 365 && n !== trip.days) {
+      // 子行程保护：本句在「N天」前又提了其它城市（如「曼谷2天」），视为该城市停留天数，不覆盖总行程天数
+      const before = t.slice(0, dm.index);
+      const otherCity = before.match(/(北京|清迈|曼谷|普吉|东京|大阪|京都|北海道|首尔|济州|巴厘岛|新加坡|新疆|云南|西藏|成都|重庆|三亚|厦门|大理|丽江|香格里拉|青海|甘肃|川西|稻城|冰岛|瑞士|新西兰|欧洲|日本|泰国|越南|摩洛哥)/);
+      const isSubTrip = otherCity && n < (trip.days || 0);
+      if (!isSubTrip) { trip.days = n; changed = true; }
+    }
   }
 
   // 目的地关键词
@@ -1102,27 +1108,31 @@ function rCompare() {
 // Scene: Emergency
 // ============================================
 function rEmergency() {
+  const trip = tripState || {};
+  const dest = trip.dest || '目的地';
+  const days = trip.days || 5;
+  const inc = buildIncident(dest, days);
   addMsg('ai', `
     <p>🚨 <span class="detect-tag-inline auto">🤖 系统自动检测</span></p>
     <p style="font-size:11px;color:var(--ink2);">天气MCP · 15分钟轮询 · 置信度96%</p>
   `);
 
   addMsg('ai', `
-    <p><strong>大理暴雨橙色预警</strong>，预计持续8小时。你的Day 6户外研学课程和洱海骑行将受影响。</p>
-    <p>正在生成Plan B（结合你的约束：学习优先、预算可控、体力友好）...</p>
+    <p><strong>Day ${inc.hitDay} ${esc(inc.alertName)}</strong>，预计影响你的${esc(dest)}行程。</p>
+    <p>正在生成Plan B（结合你的约束：体验优先、预算可控、体力友好）...</p>
   `);
 
   addMsg('ai', `
     <p>2个替代方案：</p>
     <div class="planb-mini rec">
       <strong>⭐ Plan B1 — 室内备选方案（推荐）</strong>
-      <p>大理州博物馆 + 白族扎染室内工坊，课程平移。骑行推迟至Day 8上午。</p>
-      <div class="planb-mini-tags"><span>💰 无额外费用</span><span>📚 学习目标不变</span><span>⏰ 仅调整顺序</span></div>
+      <p>${esc(inc.b1)}</p>
+      <div class="planb-mini-tags">${inc.b1meta.map(m => `<span>${esc(m)}</span>`).join('')}</div>
     </div>
     <div class="planb-mini">
-      <strong>Plan B2 — 提前转移丽江</strong>
-      <p>提前1天去丽江。大理退1晚，丽江加1晚。Day 7课程顺延。</p>
-      <div class="planb-mini-tags"><span>💰 额外~320元</span><span>🚌 需改签大巴</span><span>🏨 酒店退改</span></div>
+      <strong>Plan B2 — 提前转移邻近城市</strong>
+      <p>${esc(inc.b2)}</p>
+      <div class="planb-mini-tags">${inc.b2meta.map(m => `<span>${esc(m)}</span>`).join('')}</div>
     </div>
     <p>推荐 <strong>Plan B1</strong>。要执行吗？</p>
   `);
@@ -1365,19 +1375,26 @@ document.querySelectorAll('.plan-card').forEach(card => {
 // 依据 chat 提取的 tripState 动态渲染「行程时间线」
 function renderMonitorTrip() {
   const card = document.getElementById('timelineCard');
+  const incidentBody = document.getElementById('incidentBody');
+  const incidentHint = document.getElementById('incidentEmptyHint');
   if (!card) return;
   if (!tripState || !tripState.dest) {
-    // 尚未在对话中规划行程 → 给出引导（保留默认演示于下方）
+    // 尚未在对话中规划行程 → 给出引导（保留默认示意于下方）
     if (!card.querySelector('.tl-empty-hint')) {
       const hint = document.createElement('div');
       hint.className = 'tl-empty-hint';
       hint.innerHTML = '💡 在「AI 对话」中说出目的地和天数（如「去清迈玩5天」），这里会自动生成你的专属行程时间线。以下为示例数据。';
       card.insertBefore(hint, card.firstChild.nextSibling);
     }
+    if (incidentBody) incidentBody.style.display = 'none';
+    if (incidentHint) incidentHint.style.display = '';
     return;
   }
+  if (incidentHint) incidentHint.style.display = 'none';
+  if (incidentBody) incidentBody.style.display = '';
   const { dest, days, from } = tripState;
   const phases = buildTimelinePhases(dest, days);
+  const monitorBar = `<div class="tl-monitor-bar">🛰️ 当前监控行程：<b>${esc(dest)}</b> · <b>${esc(String(days || '?'))}</b>天${from ? ' · 出发地 ' + esc(from) : ''} · 数据来源：AI 对话</div>`;
   const rows = phases.map((p, i) => {
     const st = i === 0 ? 'done' : (i === 1 ? 'active' : 'pending');
     const dotCls = st === 'active' ? 'tl-dot pulse' : 'tl-dot';
@@ -1388,10 +1405,116 @@ function renderMonitorTrip() {
       `<div class="tl-info"><span class="tl-day">${esc(p.day)}</span><p>${esc(p.text)}</p></div>${tag}</div>`;
   }).join('');
   card.innerHTML =
+    monitorBar +
     `<h3>📍 行程时间线 — ${esc(dest)} ${days || ''}天 <span class="tl-live">· 来自 AI 对话</span></h3>` +
     (from ? `<p class="tl-sub">出发地：${esc(from)} → 目的地：${esc(dest)}</p>` : '') +
     rows +
     `<p class="tl-note">⏱️ 时间线依据你在对话中规划的行程动态生成；天气/航班预警为产品演示。</p>`;
+  renderMonitorIncident(dest, days);
+}
+
+// 稳定哈希：相同目的地总是映射到同一类突发场景（演示数据稳定可复现）
+function hashStr(s) {
+  let h = 0;
+  for (let i = 0; i < (s || '').length; i++) h = (h * 31 + s.charCodeAt(i)) >>> 0;
+  return h;
+}
+
+// 依据当前行程（目的地 + 天数）生成贴合的突发状况与 Plan B 备选（演示用模拟数据）
+function buildIncident(dest, days) {
+  dest = dest || '目的地';
+  days = (days && days > 0) ? days : 5;
+  const hitDay = Math.max(2, Math.min(days - 1, Math.round(days / 3) + 1));
+  const alerts = [
+    { name: '暴雨橙色预警', desc: '预计持续8小时。户外行程与交通路段受影响。' },
+    { name: '台风蓝色预警', desc: '沿海风力增强，船只与户外活动可能临时取消。' },
+    { name: '高温红色预警', desc: '日间气温突破38℃，户外徒步存在中暑风险。' },
+    { name: '强对流大风预警', desc: '短时大风可达8级，高空与水面活动暂停。' },
+  ];
+  const a = alerts[hashStr(dest) % alerts.length];
+  const moveDay = Math.min(days, hitDay + 2);
+  return {
+    hitDay,
+    alertName: a.name,
+    alertDesc: a.desc,
+    b1: `${dest}本地博物馆 + 特色室内工坊，行程平移。户外/水面活动推迟至 Day ${moveDay}。`,
+    b1meta: ['💰 无额外费用', '📚 体验目标不变', '⏰ 仅调整顺序'],
+    b2: `提前1天前往邻近城市。${dest}退1晚，邻城加1晚。Day ${hitDay + 1}行程顺延。`,
+    b2meta: ['💰 额外 ~320元', '🚌 需改签交通', '🏨 酒店退改'],
+  };
+}
+
+// 根据当前行程渲染行程监控的「突发状况 + Plan B + 编排链」
+function renderMonitorIncident(dest, days) {
+  const body = document.getElementById('incidentBody');
+  if (!body) return;
+  const inc = buildIncident(dest, days);
+  const conf = 90 + (hashStr(dest) % 9); // 90-98 稳定置信度
+  body.innerHTML = `
+    <div class="detect-tag">
+      <span class="badge auto">🤖 系统自动检测</span>
+      <span class="detect-meta">模拟监控 · Day ${inc.hitDay} · 置信度 ${conf}%</span>
+    </div>
+    <div class="alert-box">
+      <div class="alert-icon">🚨</div>
+      <div>
+        <h3>Day ${inc.hitDay} — ${esc(inc.alertName)}</h3>
+        <p>${esc(inc.alertDesc)}</p>
+      </div>
+    </div>
+    <h4 style="margin:20px 0 12px;font-size:15px;">🤖 AI 推荐 Plan B（综合你的约束）</h4>
+    <div class="plan-card selected">
+      <div class="plan-head">
+        <strong>⭐ Plan B1 — 室内备选方案</strong>
+        <span class="plan-tag rec">推荐</span>
+      </div>
+      <p>${esc(inc.b1)}</p>
+      <div class="plan-meta">${inc.b1meta.map(m => `<span>${esc(m)}</span>`).join('')}</div>
+    </div>
+    <div class="plan-card">
+      <div class="plan-head">
+        <strong>Plan B2 — 提前转移邻近城市</strong>
+        <span class="plan-tag alt">备选</span>
+      </div>
+      <p>${esc(inc.b2)}</p>
+      <div class="plan-meta">${inc.b2meta.map(m => `<span>${esc(m)}</span>`).join('')}</div>
+    </div>
+    <div class="orch-box">
+      <h4>⚙️ 点击确认后，Agent 自动编排 MCP 调用链</h4>
+      <div class="orch-chain" id="orchChain">
+        <div class="och-step" data-step="1">
+          <div class="och-num">1</div>
+          <div class="och-body"><strong>取消受影响户外场地</strong><span>预订MCP: cancel_booking · ¥0</span></div>
+          <span class="och-status pending">等待</span>
+        </div>
+        <div class="och-join"><span>并行</span></div>
+        <div class="och-step" data-step="2">
+          <div class="och-num">2</div>
+          <div class="och-body"><strong>预订${esc(dest)}室内替代场地</strong><span>预订MCP: create_booking · ¥0</span></div>
+          <span class="och-status pending">等待</span>
+        </div>
+        <div class="och-join"><span>并行</span></div>
+        <div class="och-step" data-step="3">
+          <div class="och-num">3</div>
+          <div class="och-body"><strong>确认特色工坊/活动</strong><span>飞猪MCP: book_local · ¥0</span></div>
+          <span class="och-status pending">等待</span>
+        </div>
+        <div class="och-join"><span>依赖</span></div>
+        <div class="och-step" data-step="4">
+          <div class="och-num">4</div>
+          <div class="och-body"><strong>通知同行人 + 更新行程</strong><span>通知MCP: send_wechat · ¥0.75</span></div>
+          <span class="och-status pending">等待</span>
+        </div>
+      </div>
+      <div class="orch-summary">
+        <span>总费用 ¥0.75</span><span>预计 ≈12秒</span><span>需授权：是</span>
+      </div>
+    </div>
+    <button class="btn primary full" id="execBtn" onclick="executePlanB()">
+      ✅ 确认执行 Plan B1 — 授权 Agent 自动编排以上 4 步
+    </button>
+    <p class="safe-note" id="execNote">🔐 以上为非支付类操作。涉及退款/扣款将单独请求授权。</p>
+  `;
 }
 
 // Live query (real Ctrip 问道)
@@ -1414,10 +1537,12 @@ function initMonitor() {
   renderMonitorTrip();   // 首次加载即按已保存行程渲染
 }
 
-// Execute orchestration
-document.getElementById('execBtn')?.addEventListener('click', async function() {
-  this.disabled = true;
-  this.textContent = '⏳ Agent 编排中...';
+// Execute orchestration（全局函数，供 execBtn onclick 调用；监控页重渲染后依然有效）
+async function executePlanB() {
+  const btn = document.getElementById('execBtn');
+  if (!btn || btn.disabled) return;
+  btn.disabled = true;
+  btn.textContent = '⏳ Agent 编排中...';
   setStatus('执行中...', true);
 
   const steps = document.querySelectorAll('#orchChain .och-step');
@@ -1431,23 +1556,24 @@ document.getElementById('execBtn')?.addEventListener('click', async function() {
   }, delay));
 
   await animate(steps[0], 'active', 300);
-  this.textContent = '⏳ 步骤 1/4...';
+  btn.textContent = '⏳ 步骤 1/4...';
   await animate(steps[0], 'done', 600);
 
-  this.textContent = '⏳ 步骤 2-3/4(并行)...';
+  btn.textContent = '⏳ 步骤 2-3/4(并行)...';
   await Promise.all([animate(steps[1],'active',200), animate(steps[2],'active',200)]);
   await Promise.all([animate(steps[1],'done',500), animate(steps[2],'done',500)]);
 
-  this.textContent = '⏳ 步骤 4/4...';
+  btn.textContent = '⏳ 步骤 4/4...';
   await animate(steps[3], 'active', 200);
   await animate(steps[3], 'done', 500);
 
-  this.textContent = '✅ 全部执行完成';
-  this.style.background = '#34c759';
-  document.getElementById('execNote').innerHTML = '✅ <strong>执行完成</strong>：4个MCP调用全部成功。课程已取消→博物馆已预订→工坊已确认→15名学员已通知。总耗时3.2秒，费用¥0.75。';
+  btn.textContent = '✅ 全部执行完成';
+  btn.style.background = '#34c759';
+  const note = document.getElementById('execNote');
+  if (note) note.innerHTML = '✅ <strong>执行完成</strong>：4个MCP调用全部成功。场地已取消→室内场地已预订→工坊已确认→同行人已通知。总耗时3.2秒，费用¥0.75。';
   setStatus('已完成');
   showToast('✅ Plan B1 执行完成');
-});
+}
 
 // ============================================
 // Demo Button

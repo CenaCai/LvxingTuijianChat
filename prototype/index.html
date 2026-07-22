@@ -194,8 +194,10 @@
           <div class="tl-item"><div class="tl-dot"></div><div class="tl-info"><span class="tl-day">Day 10-15</span><p>香格里拉 + 普达措 + 返程</p></div><span class="tl-tag pending">⏳</span></div>
         </div>
 
-        <!-- Incident panel -->
+        <!-- Incident panel（由 app.js renderMonitorIncident 动态渲染，跟随 chat 行程）-->
         <div class="incident-card">
+          <div id="incidentEmptyHint" class="tl-empty-hint" style="display:none;">💡 在「AI 对话」中规划好行程（如「去泰国玩5天」）后，这里会根据你的目的地和天数，模拟突发状况并生成专属 Plan B 备选方案。以下为示例数据。</div>
+          <div id="incidentBody">
           <div class="detect-tag">
             <span class="badge auto">🤖 系统自动检测</span>
             <span class="detect-meta">OpenWeatherMap API · 2026-07-15 14:32 · 置信度 96%</span>
@@ -266,10 +268,11 @@
             </div>
           </div>
 
-          <button class="btn primary full" id="execBtn">
+          <button class="btn primary full" id="execBtn" onclick="executePlanB()">
             ✅ 确认执行 Plan B1 — 授权 Agent 自动编排以上 4 步
           </button>
           <p class="safe-note" id="execNote">🔐 以上为非支付类操作。涉及退款/扣款将单独请求授权。</p>
+          </div><!-- /incidentBody -->
         </div>
       </div>
     </section>
