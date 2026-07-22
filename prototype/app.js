@@ -1001,22 +1001,18 @@ function sendAsUserConfirm(originalText, summary) {
   setTimeout(() => { remTyping(tid); aiRespondReal(originalText + '\n\n（本次行程沿用：' + summary + '）'); }, 400);
 }
 
-// 拒绝沿用：把当前行程特定记忆标记为已排除，进入聊天式澄清追问
+  // 拒绝沿用：把当前行程特定记忆标记为已排除，进入聊天式澄清追问
 function enterClarifyMode(tripMems, stageWrap, injectable) {
   if (tripMems && tripMems.length) {
     tripMems.forEach(m => rejectedTripMemLabels.add(m.label));
     saveTripLabelState();
   }
+  // 注意：不再从 tripState 预填 days/from，避免历史行程残留污染新行程
+  // （之前的 bug：清空记忆但 tripState 没清，导致下一轮"我想去北京"被预填上 5 天）
   clarifyState = {
     active: true,
     dest: (tripState && tripState.dest) || '',
-    collected: {
-      days: (tripState && tripState.days) || 0,
-      purpose: '',
-      budget: '',
-      from: (tripState && tripState.from) || '',
-      notes: ''
-    }
+    collected: { days: 0, purpose: '', budget: '', from: '', notes: '' }
   };
   // 从已确认的历史行程记忆里预填时长/总预算，减少重复提问
   if (injectable && injectable.length) {
@@ -1449,15 +1445,16 @@ async function runCompare() {
   if (document.getElementById('cmpBTitle')) document.getElementById('cmpBTitle').textContent = b;
 
   const focusTxt = [...cmpSelectedFocus].length ? '，侧重' + [...cmpSelectedFocus].join('、') : '';
-  const qBase = `对比旅行目的地：${a} 和 ${b}。请从预算、美食、自然风光、体验、适合人群、大致费用区间等角度分析各自优劣${focusTxt}。`;
+  // 每个目的地只输出该目的地的内容（不再"vs对方"），由前端并排展示对比
+  const qFor = name => `请只讲 ${name} 本身的旅行特点${focusTxt}。从预算、美食、自然风光、体验、适合人群、大致费用区间等角度介绍 ${name} 的优劣。直接介绍 ${name}，不要提对方，不要写"vs"对比。`;
   if (aEl) aEl.innerHTML = '<p class="loading">⏳ 正在向 AI 助手查询「' + esc(a) + '」…</p>';
   if (bEl) bEl.innerHTML = '<p class="loading">⏳ 正在向 AI 助手查询「' + esc(b) + '」…</p>';
   if (sumEl) sumEl.innerHTML = '';
   setStatus('对比查询中...', true);
 
   const [htmlA, htmlB] = await Promise.all([
-    ctripHtml(qBase + ` 先专门展开讲${a}。`),
-    ctripHtml(qBase + ` 先专门展开讲${b}。`),
+    ctripHtml(qFor(a)),
+    ctripHtml(qFor(b)),
   ]);
   if (aEl) aEl.innerHTML = (htmlA || '<p>无结果</p>');
   if (bEl) bEl.innerHTML = (htmlB || '<p>无结果</p>');
@@ -1917,11 +1914,22 @@ function clearAllMemories() {
   extractedMemories = [];
   confirmedTripMemLabels.clear();
   rejectedTripMemLabels.clear();
+  // 行程状态也一并清零，避免残留 dest/days/from 被后续 enterClarifyMode 沿用为默认值
+  // （"删除所有设定"语义=完全从零开始，不只是清掉记忆库）
+  tripState = { dest: '', days: 0, from: '', updatedAt: Date.now() };
+  // 澄清状态也复位，防止下一次新建会话时残留槽位污染新行程
+  clarifyState = { active: false, dest: '', collected: { days: 0, purpose: '', budget: '', from: '', notes: '' } };
+  // 清掉当前目的地对应的沿用/排除历史，避免下一位新行程自动继承
+  try {
+    localStorage.setItem(TRIP_CONFIRM_KEY, JSON.stringify({ dest: '', labels: [] }));
+    localStorage.setItem(TRIP_REJECT_KEY, JSON.stringify({ dest: '', labels: [] }));
+  } catch {}
   saveMemories();
-  saveTripLabelState();
+  saveTrip();
   updateCtxMemory();
   renderMemoryPage();
   renderTripMemory();
+  if (typeof renderMonitorTrip === 'function') renderMonitorTrip();
   return n;
 }
 
