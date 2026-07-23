@@ -374,7 +374,7 @@ function scrollChat() { chatMessages.scrollTop = chatMessages.scrollHeight; }
 function addMsg(role, html) {
   const div = document.createElement('div');
   div.className = `chat-msg ${role}`;
-  div.innerHTML = `<div class="msg-avatar">${role === 'user' ? '👤' : '🤖'}</div><div class="msg-bubble">${html}</div>`;
+  div.innerHTML = `<div class="msg-avatar">${role === 'user' ? '👤' : '<img src="./icon.png" alt="CSTS" />'}</div><div class="msg-bubble">${html}</div>`;
   chatMessages.appendChild(div);
   scrollChat();
   return div;
@@ -385,7 +385,7 @@ function addTyping() {
   const div = document.createElement('div');
   div.className = 'chat-msg ai';
   div.id = id;
-  div.innerHTML = '<div class="msg-avatar">🤖</div><div class="msg-bubble"><div class="typing-dots"><span></span><span></span><span></span></div></div>';
+  div.innerHTML = '<div class="msg-avatar"><img src="./icon.png" alt="CSTS" /></div><div class="msg-bubble"><div class="typing-dots"><span></span><span></span><span></span></div></div>';
   chatMessages.appendChild(div);
   scrollChat();
   return id;
@@ -397,7 +397,7 @@ function addChips(labels) {
   const div = document.createElement('div');
   div.className = 'chat-msg ai';
   const chipsHtml = labels.map(l => `<button class="chip">${l}</button>`).join('');
-  div.innerHTML = `<div class="msg-avatar">🤖</div><div class="msg-bubble"><div class="quick-chips">${chipsHtml}</div></div>`;
+  div.innerHTML = `<div class="msg-avatar"><img src="./icon.png" alt="CSTS" /></div><div class="msg-bubble"><div class="quick-chips">${chipsHtml}</div></div>`;
   chatMessages.appendChild(div);
   // Bind click
   div.querySelectorAll('.chip').forEach(c => c.addEventListener('click', async () => await handleChip(c.textContent)));
