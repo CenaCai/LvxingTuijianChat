@@ -61,7 +61,7 @@ const STABLE_MEMORY_LABELS = new Set([
   '兴趣主题', '忌讳/禁忌', '健康与体力', '语言偏好', '气候偏好', '购物偏好', '其他'
 ]);
 const TRIP_MEMORY_LABELS = new Set([
-  '预算习惯', '行程时长', '总预算', '学习目标', '证件与签证'
+  '目的地', '预算习惯', '行程时长', '总预算', '学习目标', '证件与签证'
 ]);
 function classifyMemory(label) {
   if (STABLE_MEMORY_LABELS.has(label)) return 'stable';
@@ -130,6 +130,18 @@ function updateTripFromInput(text, opts) {
   let changed = false;
   const trip = tripState || { dest: '', days: 0, from: '', updatedAt: 0 };
 
+  // 目的地关键词（先解析，让后面的"子行程保护"能感知到本轮是否切换了目的地）
+  const dest = t.match(/(北京|清迈|曼谷|普吉|东京|大阪|京都|北海道|首尔|济州|巴厘岛|新加坡|新疆|云南|西藏|成都|重庆|三亚|厦门|大理|丽江|香格里拉|青海|甘肃|川西|稻城|冰岛|瑞士|新西兰|欧洲|日本|泰国|越南|摩洛哥)/);
+  let destChanged = false;
+  if (dest && dest[1] !== trip.dest) {
+    // 目的地切换时，重置沿用/排除状态、清空旧出发地，并加载新目的地对应的选择
+    resetTripLabelStateForDest(dest[1]);
+    trip.dest = dest[1];
+    trip.from = '';
+    changed = true;
+    destChanged = true;
+  }
+
   // 天数：支持「5天」「十五天」「2周」「一个月」
   const dm = t.match(/([0-9]{1,3}|[一二两三四五六七八九十]{1,3})\s*(天|日|周|个月)/);
   if (dm) {
@@ -139,29 +151,31 @@ function updateTripFromInput(text, opts) {
     if (n > 0 && n <= 365 && n !== trip.days) {
       // 子行程保护：正常对话中，本句在「N天」前又提了其它城市（如「曼谷2天」），
       // 且 N 小于当前总天数时，视为该城市停留天数，不覆盖总行程天数。
-      // 澄清模式下用户就是在纠正槽位，关闭此保护。
+      // 关键：若「N天」前出现的城市就是当前 trip.dest（如「北京3天」修正总天数），
+      // 那 N 天属于主行程本身，不是子行程，应跳过保护。
       let isSubTrip = false;
       if (!options.isClarify) {
         const before = t.slice(0, dm.index);
-        const otherCity = before.match(/(北京|清迈|曼谷|普吉|东京|大阪|京都|北海道|首尔|济州|巴厘岛|新加坡|新疆|云南|西藏|成都|重庆|三亚|厦门|大理|丽江|香格里拉|青海|甘肃|川西|稻城|冰岛|瑞士|新西兰|欧洲|日本|泰国|越南|摩洛哥)/);
-        isSubTrip = otherCity && n < (trip.days || 0);
+        const beforeCity = before.match(/(北京|清迈|曼谷|普吉|东京|大阪|京都|北海道|首尔|济州|巴厘岛|新加坡|新疆|云南|西藏|成都|重庆|三亚|厦门|大理|丽江|香格里拉|青海|甘肃|川西|稻城|冰岛|瑞士|新西兰|欧洲|日本|泰国|越南|摩洛哥)/);
+        const isMainDestInBefore = beforeCity && beforeCity[0] === trip.dest;
+        isSubTrip = beforeCity && !isMainDestInBefore && n < (trip.days || 0);
       }
       if (!isSubTrip) { trip.days = n; changed = true; }
     }
   }
 
-  // 目的地关键词
-  const dest = t.match(/(北京|清迈|曼谷|普吉|东京|大阪|京都|北海道|首尔|济州|巴厘岛|新加坡|新疆|云南|西藏|成都|重庆|三亚|厦门|大理|丽江|香格里拉|青海|甘肃|川西|稻城|冰岛|瑞士|新西兰|欧洲|日本|泰国|越南|摩洛哥)/);
-  if (dest && dest[1] !== trip.dest) {
-    // 目的地切换时，重置沿用/排除状态、清空旧出发地，并加载新目的地对应的选择
-    resetTripLabelStateForDest(dest[1]);
-    trip.dest = dest[1];
-    trip.from = '';
-    changed = true;
+  // 出发地：用「从X出发」或「^X出发」明确锁定城市边界，再用白名单过滤，
+  // 避免旧正则 `/(?:从)?([\u4e00-\u9fa5]{2,6})出发/` 的贪婪误匹配
+  // （如「我想从北京出发」会匹配成 from="想从北京"5字，或「明天上海出发」→「明天上海」）。
+  // 1) 优先「从X出发」显式模式
+  const FROM_CITIES = ['北京','上海','广州','深圳','成都','重庆','杭州','南京','武汉','西安','天津','苏州','长沙','郑州','沈阳','青岛','宁波','东莞','无锡','厦门','福州','昆明','大连','哈尔滨','长春','石家庄','济南','合肥','南宁','贵阳','海口','兰州','银川','西宁','乌鲁木齐','拉萨','呼和浩特','南昌','太原','香港','台北','澳门'];
+  let fromCity = null;
+  const mFrom1 = t.match(/(?:从|^)([\u4e00-\u9fa5]{2,4})出发/);
+  if (mFrom1) {
+    const hit = FROM_CITIES.find(c => c === mFrom1[1]);
+    if (hit) fromCity = hit;
   }
-
-  // 出发地
-  const from = t.match(/(?:从)?([\u4e00-\u9fa5]{2,6})(?:出发)/);
+  const from = fromCity ? [null, fromCity] : null;
   if (from && from[1] !== trip.from) { trip.from = from[1]; changed = true; }
 
   if (changed) {
@@ -170,7 +184,14 @@ function updateTripFromInput(text, opts) {
     saveTrip();
     renderTripMemory();   // 行程要素变化即时反映到记忆中心面板
   }
-  return changed;
+  // 返回本轮解析结果，让澄清追问只采纳「本轮输入里明确出现」的事实，
+  // 避免 tripState 残留（来自上一轮/上一会话）污染新行程的提问文案。
+  return {
+    changed,
+    hasDest: !!dest,    // 本轮正则是否匹配到目的地
+    hasDays: !!dm,      // 本轮正则是否匹配到时长
+    hasFrom: !!from,    // 本轮正则是否匹配到出发地
+  };
 }
 
 // 依据目的地 + 天数动态切分行程时间线阶段（保证区间连续递增、不重叠）
@@ -820,7 +841,8 @@ async function aiRespondReal(text) {
   const sceneName = ({ europe: '知识问答', compare: '方案对比', emergency: '突发应对', budget: '预算规划', route: '路线交通', guide: '攻略推荐', memory: '偏好管理', general: '通用咨询' })[scene] || '通用咨询';
   const entities = extractEntities(text);
   const prefs = extractPreferences(text);
-  const tripChanged = updateTripFromInput(text);   // 解析目的地/天数 → 行程监控联动
+  const tripParsed = updateTripFromInput(text);   // 解析目的地/天数 → 行程监控联动
+  const tripChanged = tripParsed.changed;
   setStage(1, 'done');
   setDetail(`<div class="stage-detail"><span class="sd-tag">意图</span>${sceneName}${entities.length ? ' · ' + entities.map(e => `<code>${esc(e)}</code>`).join(' ') : ''}</div>`);
 
@@ -871,7 +893,7 @@ async function aiRespondReal(text) {
       renderClarificationCard(text, memCtx.unconfirmedTrip, stageWrap);
     } else {
       // 没有历史行程记忆需要确认时，直接在阶段条气泡里进入聊天式槽位追问
-      enterClarifyMode([], stageWrap, memCtx.injectable);
+      enterClarifyMode([], stageWrap, memCtx.injectable, tripParsed);
     }
     return;
   }
@@ -885,7 +907,7 @@ async function aiRespondReal(text) {
     setStage(3, 'pending');
     setStage(4, 'pending');
     setStage(5, 'pending');
-    enterClarifyMode([], stageWrap, memCtx.injectable);
+    enterClarifyMode([], stageWrap, memCtx.injectable, tripParsed);
     return;
   }
 
@@ -1010,15 +1032,24 @@ function sendAsUserConfirm(originalText, summary) {
 }
 
   // 拒绝沿用：把当前行程特定记忆标记为已排除，进入聊天式澄清追问
-function enterClarifyMode(tripMems, stageWrap, injectable) {
+function enterClarifyMode(tripMems, stageWrap, injectable, parsed) {
   if (tripMems && tripMems.length) {
     tripMems.forEach(m => rejectedTripMemLabels.add(m.label));
     saveTripLabelState();
   }
-  // 预填策略：仅采纳「本轮」已从输入解析出的事实（tripState.days/from>0），
-  // 避免历史残留污染新行程；删除设定后 tripState 已被清空（days=0），自然不会预填。
-  const prefillDays = (tripState && tripState.days > 0) ? tripState.days : 0;
-  const prefillFrom = (tripState && tripState.from && tripState.from !== (tripState && tripState.dest)) ? tripState.from : '';
+  // 预填策略：仅采纳「本轮」已从输入正则解析出的事实（parsed.hasDays/hasFrom），
+  // 避免 tripState 残留（来自上一轮/上一会话，如「上海」）污染新行程的提问文案。
+  // tripState.days/from 仅作为本轮解析的兜底（如用户在澄清中再纠正槽位）。
+  // parsed 缺失（老调用点）时，按"本轮无明确槽位"处理，只采纳「行程时长」记忆。
+  const p = parsed || {};
+  const prefillDays = p.hasDays
+    ? ((tripState && tripState.days > 0) ? tripState.days : 0)
+    : 0;
+  // 用户本轮若显式给出 from，就直接采用（包括「从北京出发去北京」的同城场景），
+  // 不要再追问「从哪里出发」；只有本轮未提及 from 时才留空（避免 tripState 残留污染）。
+  const prefillFrom = p.hasFrom
+    ? ((tripState && tripState.from) ? tripState.from : '')
+    : '';
   clarifyState = {
     active: true,
     dest: (tripState && tripState.dest) || '',
