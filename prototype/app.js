@@ -69,6 +69,25 @@ function classifyMemory(label) {
   return 'stable'; // 未知标签默认安全侧：当作可继承偏好
 }
 
+// 统一的城市/目的地关键词：所有需要从用户输入匹配城市/目的地的正则都引用这里。
+// 既要覆盖国内主要城市（北京/上海/广州/深圳/成都/重庆/香港/澳门/台北 等），
+// 也要覆盖国际热门目的地（清迈/曼谷/东京/巴厘岛/冰岛/欧洲 等）。
+// 顺序：长的在前，避免「日本」被「日」先匹配掉之类的问题。
+const CITY_KEYWORDS = [
+  // 国内主要城市
+  '北京','上海','广州','深圳','成都','重庆','杭州','南京','武汉','西安','天津','苏州',
+  '长沙','郑州','沈阳','青岛','宁波','东莞','无锡','厦门','福州','昆明','大连','哈尔滨',
+  '长春','石家庄','济南','合肥','南宁','贵阳','海口','兰州','银川','西宁','乌鲁木齐',
+  '拉萨','呼和浩特','南昌','太原','香港','台北','澳门',
+  // 国内度假/小众目的地
+  '三亚','大理','丽江','香格里拉','青海','甘肃','川西','稻城','新疆','云南','西藏',
+  // 国际热门目的地
+  '清迈','曼谷','普吉','东京','大阪','京都','北海道','首尔','济州','巴厘岛','新加坡',
+  '冰岛','瑞士','新西兰','欧洲','日本','泰国','越南','摩洛哥'
+];
+// 构造一个 (?:A|B|C) 的捕获正则，按关键词长度倒序排列以避免短词先匹配
+const CITY_REGEX_STR = CITY_KEYWORDS.slice().sort((a, b) => b.length - a.length).map(c => c).join('|');
+
 // 用户在当前会话中已确认沿用的行程特定记忆标签
 const confirmedTripMemLabels = new Set();
 // 用户点击「重新设定」后排除的行程特定记忆标签（不再显示为待确认）
@@ -129,9 +148,15 @@ function updateTripFromInput(text, opts) {
   const t = text || '';
   let changed = false;
   const trip = tripState || { dest: '', days: 0, from: '', updatedAt: 0 };
+  // 关键：先把旧目的地保存下来，用于「目的地变了」检测 → 让上层弹出确认卡片
+  const oldDest = trip.dest || '';
 
-  // 目的地关键词（先解析，让后面的"子行程保护"能感知到本轮是否切换了目的地）
-  const dest = t.match(/(北京|清迈|曼谷|普吉|东京|大阪|京都|北海道|首尔|济州|巴厘岛|新加坡|新疆|云南|西藏|成都|重庆|三亚|厦门|大理|丽江|香格里拉|青海|甘肃|川西|稻城|冰岛|瑞士|新西兰|欧洲|日本|泰国|越南|摩洛哥)/);
+  // 目的地关键词（先解析，让后面的"子行程保护"能感知到本轮是否切换了目的地）。
+  // 用 lookbehind (?<![从]) 排除「从上海出发」短语里的「上海」误识别为目的地——
+  // 出发地有自己的解析路径（FROM_CITIES 白名单），避免两类 regex 抢同一个城市。
+  // 兜底：若 lookbehind 后没找到，放开限制，让「从北京出发去北京」这种同城游也能识别出目的地。
+  let dest = t.match(new RegExp('(?<![从])(' + CITY_REGEX_STR + ')'));
+  if (!dest) dest = t.match(new RegExp('(' + CITY_REGEX_STR + ')'));
   let destChanged = false;
   if (dest && dest[1] !== trip.dest) {
     // 目的地切换时，重置沿用/排除状态、清空旧出发地，并加载新目的地对应的选择
@@ -156,7 +181,8 @@ function updateTripFromInput(text, opts) {
       let isSubTrip = false;
       if (!options.isClarify) {
         const before = t.slice(0, dm.index);
-        const beforeCity = before.match(/(北京|清迈|曼谷|普吉|东京|大阪|京都|北海道|首尔|济州|巴厘岛|新加坡|新疆|云南|西藏|成都|重庆|三亚|厦门|大理|丽江|香格里拉|青海|甘肃|川西|稻城|冰岛|瑞士|新西兰|欧洲|日本|泰国|越南|摩洛哥)/);
+        // 同样排除「从X」短语里的 X；只把「真正的 N天前出现的城市」当作子行程信号
+        const beforeCity = before.match(new RegExp('(?<![从])(' + CITY_REGEX_STR + ')'));
         const isMainDestInBefore = beforeCity && beforeCity[0] === trip.dest;
         isSubTrip = beforeCity && !isMainDestInBefore && n < (trip.days || 0);
       }
@@ -186,11 +212,16 @@ function updateTripFromInput(text, opts) {
   }
   // 返回本轮解析结果，让澄清追问只采纳「本轮输入里明确出现」的事实，
   // 避免 tripState 残留（来自上一轮/上一会话）污染新行程的提问文案。
+  // destConflict 用于让上层（aiRespondReal）判断是否需要弹出「目的地变了，请确认」卡片：
+  //   只有当「旧 dest 非空」且「本轮解析到的新 dest ≠ 旧 dest」时才返回，避免空状态下的首问误触发。
+  const destConflict = (destChanged && oldDest && dest) ? { from: oldDest, to: dest[1] } : null;
   return {
     changed,
     hasDest: !!dest,    // 本轮正则是否匹配到目的地
     hasDays: !!dm,      // 本轮正则是否匹配到时长
     hasFrom: !!from,    // 本轮正则是否匹配到出发地
+    destConflict,       // { from, to } 或 null
+    oldDest,            // 本轮更新前的旧目的地（可能为 ''）
   };
 }
 
@@ -754,8 +785,9 @@ function extractEntities(text) {
   if (days) ents.push('时长: ' + days[0]);
   const from = text.match(/(?:从)?([\u4e00-\u9fa5]{2,6})(?:出发)/);
   if (from) ents.push('出发地: ' + from[1]);
-  // 常见目的地关键词
-  const dest = text.match(/(北京|清迈|曼谷|东京|大阪|京都|首尔|巴厘岛|新疆|云南|西藏|成都|重庆|三亚|厦门|大理|丽江|青海|甘肃|川西|北海道|冰岛|瑞士|新西兰|欧洲|日本|泰国|越南)/);
+  // 常见目的地关键词（引用全局 CITY_KEYWORDS，避免「香港」「台北」等漏匹配；
+  // 同样用 lookbehind 排除「从X出发」里的 X 误识别）
+  const dest = text.match(new RegExp('(?<![从])(' + CITY_REGEX_STR + ')'));
   if (dest) ents.push('目的地: ' + dest[1]);
   return ents;
 }
@@ -824,7 +856,8 @@ function kbDirectAnswerable(kbResults, text) {
   });
 }
 
-async function aiRespondReal(text) {
+async function aiRespondReal(text, opts) {
+  const options = opts || {};
   // 阶段状态：pending / active / done
   const states = ['pending', 'pending', 'pending', 'pending', 'pending', 'pending'];
   const bubble = addMsg('ai', stepperHtml(states));
@@ -845,6 +878,28 @@ async function aiRespondReal(text) {
   const tripChanged = tripParsed.changed;
   setStage(1, 'done');
   setDetail(`<div class="stage-detail"><span class="sd-tag">意图</span>${sceneName}${entities.length ? ' · ' + entities.map(e => `<code>${esc(e)}</code>`).join(' ') : ''}</div>`);
+
+  // ★ 目的地变更检测：用户本轮新说了一个目的地，且与旧 tripState.dest 不同时，
+  //   弹出三选一卡片（切换 / 重新设定 / 沿用旧），让用户明确选择，避免 AI 默默吞掉旧行程。
+  //   知识库直接命中（FAQ）的场景跳过此步——那是知识问答，不算行程规划。
+  //   options.skipDestConflict 用于用户已经在卡片上点过按钮后的二次调用，避免循环。
+  if (tripParsed.destConflict && !options.skipDestConflict) {
+    const kbResultsEarly = await queryKb(text, 3);
+    const kbDirectEarly = kbDirectAnswerable(kbResultsEarly, text);
+    if (!kbDirectEarly) {
+      setStage(2, 'pending');
+      setStage(3, 'pending');
+      setStage(4, 'pending');
+      setStage(5, 'pending');
+      setDetail(`<div class="stage-detail"><span class="sd-tag sd-warn">检测到目的地变更</span>从 <code>${esc(tripParsed.destConflict.from)}</code> 改为 <code>${esc(tripParsed.destConflict.to)}</code>，需要你确认。</div>`);
+      renderDestinationChangeCard(text, tripParsed.destConflict, stageWrap, {
+        onSwitch: (origText) => aiRespondReal(origText, { skipDestConflict: true }),
+        onReset:  (origText) => aiRespondReal(origText, { skipDestConflict: true }),
+        onKeep:   (origText) => aiRespondReal(origText, { skipDestConflict: true })
+      });
+      return;
+    }
+  }
 
   // ③ 记忆检索 + 写入 + 相关性校验 + 平台知识库（RAG）检索
   setStage(2, 'active'); await sleep(300);
@@ -996,9 +1051,11 @@ function renderClarificationCard(originalText, tripMems, stageWrap) {
   const card = document.createElement('div');
   card.className = 'clarify-card';
   card.id = id;
+  // 用本轮解析出的目的地（tripState.dest 已经更新过），避免硬编码「北京之行」
+  const newDest = (tripState && tripState.dest) || '';
   card.innerHTML = `
     <div class="clarify-title">🧠 检测到历史行程设定</div>
-    <p class="clarify-desc">你只说了「${esc(originalText)}」，但我之前记录过这些行程特定信息。它们对本次北京之行是否仍然适用？</p>
+    <p class="clarify-desc">你只说了「${esc(originalText)}」，但我之前记录过这些行程特定信息。它们对本次${esc(newDest || '新行程')}是否仍然适用？</p>
     <div class="clarify-list">${items}</div>
     <div class="clarify-actions">
       <button class="btn btn-primary clar-confirm">✅ 沿用这些设定</button>
@@ -1021,6 +1078,77 @@ function renderClarificationCard(originalText, tripMems, stageWrap) {
     clearAllMemories();   // 重新设定 = 清空全部记忆，从零开始
     sendAsUserReject(originalText, tripMems);
   });
+}
+
+// 目的地变更卡片：当用户输入的新目的地 ≠ 旧 tripState.dest 时弹出，
+// 让用户在「切换 / 重新设定 / 沿用旧」三选一，避免 AI 默默把旧行程吞掉。
+function renderDestinationChangeCard(originalText, conflict, stageWrap, callbacks) {
+  const id = 'destchg-' + Date.now();
+  const card = document.createElement('div');
+  card.className = 'clarify-card destchg-card';
+  card.id = id;
+  card.innerHTML = `
+    <div class="clarify-title">🗺️ 目的地好像变了</div>
+    <p class="clarify-desc">你这次说想去 <b>${esc(conflict.to)}</b>，但我之前记录过你想去 <b>${esc(conflict.from)}</b>。要怎么处理？</p>
+    <div class="clarify-list">
+      <div class="clar-item"><span class="clar-label">旧目的地</span><span class="clar-value">${esc(conflict.from)}</span></div>
+      <div class="clar-item"><span class="clar-label">新目的地</span><span class="clar-value">${esc(conflict.to)}</span></div>
+    </div>
+    <div class="clarify-actions destchg-actions">
+      <button class="btn btn-primary dc-switch">✅ 改为「${esc(conflict.to)}」</button>
+      <button class="btn dc-reset">🔄 重新设定</button>
+      <button class="btn dc-keep">← 沿用「${esc(conflict.from)}」</button>
+    </div>
+    <p class="clarify-tip">选「沿用旧」会忽略本次目的地变更，按之前的「${esc(conflict.from)}」继续；选「重新设定」会清空全部记忆，从零开始。</p>
+  `;
+  stageWrap.appendChild(card);
+  scrollChat();
+
+  card.querySelector('.dc-switch').addEventListener('click', () => {
+    card.remove();
+    addMsg('user', `<p>改为「${conflict.to}」</p>`);
+    // 同步更新「目的地」行程记忆（如果存在）→ 让后续 AI 看到的也是新目的地
+    updateDestinationMemory(conflict.from, conflict.to);
+    // 保留其他行程特定记忆（仅更新目的地这一条），重新走完整流程，跳过 destConflict 检查
+    callbacks && callbacks.onSwitch && callbacks.onSwitch(originalText);
+  });
+  card.querySelector('.dc-reset').addEventListener('click', () => {
+    card.remove();
+    addMsg('user', '<p>重新设定</p>');
+    clearAllMemories();   // 重新设定 = 清空全部记忆，从零开始
+    callbacks && callbacks.onReset && callbacks.onReset(originalText);
+  });
+  card.querySelector('.dc-keep').addEventListener('click', () => {
+    card.remove();
+    addMsg('user', `<p>沿用「${conflict.from}」</p>`);
+    // 回滚 tripState.dest 到旧值（当前已是新值，需要覆盖回去）
+    rollbackDestination(conflict.from);
+    callbacks && callbacks.onKeep && callbacks.onKeep(originalText);
+  });
+}
+
+// 同步更新「目的地」记忆（如果存在），让后续 AI 看到的是新目的地而非旧的
+function updateDestinationMemory(oldDest, newDest) {
+  const idx = extractedMemories.findIndex(m => m.label === '目的地' && m.value === oldDest);
+  if (idx >= 0) {
+    extractedMemories[idx] = { label: '目的地', value: newDest, _t: Date.now() };
+    saveMemories();
+    renderMemoryPage && renderMemoryPage();
+    updateCtxMemory && updateCtxMemory();
+  } else {
+    // 没有旧目的地的记忆但有 tripState，添加一条新的目的地记忆
+    addMemories([{ label: '目的地', value: newDest }]);
+  }
+}
+
+// 把 tripState.dest 回滚到旧值（卡片选了「沿用旧」时调用）
+function rollbackDestination(oldDest) {
+  if (!tripState) tripState = { dest: '', days: 0, from: '', updatedAt: Date.now() };
+  tripState.dest = oldDest;
+  tripState.from = '';   // 旧出发地残留一并清空（用户没说，不要回填）
+  tripState.updatedAt = Date.now();
+  saveTrip();
+  renderTripMemory && renderTripMemory();
 }
 
 // 确认沿用：把行程特定记忆拼回 prompt，重新走完整 6 阶段
