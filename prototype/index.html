@@ -103,9 +103,9 @@
       </div>
 
       <div class="compare-inputs">
-        <input type="text" id="cmpA" placeholder="目的地 A，如 新疆" value="新疆" />
+        <input type="text" id="cmpA" placeholder="目的地 A，如 罗马" value="罗马" />
         <span class="cmp-vs">VS</span>
-        <input type="text" id="cmpB" placeholder="目的地 B，如 云南" value="云南" />
+        <input type="text" id="cmpB" placeholder="目的地 B，如 米兰" value="米兰" />
         <button class="btn primary" id="cmpBtn">开始对比</button>
       </div>
 
@@ -147,7 +147,7 @@
 
       <!-- 实时查询（真实AI 助手） -->
       <div class="live-query">
-        <input type="text" id="monQuery" placeholder="实时查询：如「上海到东京 7月25日 航班」或「大理 天气」或「大理 暴雨 预警」" />
+        <input type="text" id="monQuery" placeholder="实时查询：如「罗马到米兰 7月25日 列车」或「罗马 天气」或「罗马 暴雨 预警」" />
         <button class="btn primary" id="monQueryBtn">查询</button>
       </div>
       <div class="live-result" id="monitorResult"><p class="muted">输入上述问题，由AI 助手返回真实航班 / 天气 / 突发信息</p></div>
@@ -175,18 +175,18 @@
       <div class="monitor-grid">
         <!-- Timeline（由 app.js renderMonitorTrip 动态渲染，跟随 chat 行程）-->
         <div class="timeline-card" id="timelineCard">
-          <h3>📍 行程时间线 — 云南 15 天游学</h3>
-          <div class="tl-item done"><div class="tl-dot"></div><div class="tl-info"><span class="tl-day">Day 1</span><p>抵达昆明，酒店已确认</p></div><span class="tl-tag ok">✅</span></div>
-          <div class="tl-item done"><div class="tl-dot"></div><div class="tl-info"><span class="tl-day">Day 2-3</span><p>昆明文化探索，翠湖、讲武堂</p></div><span class="tl-tag ok">✅</span></div>
-          <div class="tl-item done"><div class="tl-dot"></div><div class="tl-info"><span class="tl-day">Day 4-5</span><p>大理古城 + 洱海骑行 + 扎染课程</p></div><span class="tl-tag ok">✅</span></div>
+          <h3>📍 行程时间线 — 意大利 15 天文化艺术游学</h3>
+          <div class="tl-item done"><div class="tl-dot"></div><div class="tl-info"><span class="tl-day">Day 1</span><p>抵达罗马，酒店已确认</p></div><span class="tl-tag ok">✅</span></div>
+          <div class="tl-item done"><div class="tl-dot"></div><div class="tl-info"><span class="tl-day">Day 2-3</span><p>罗马文化探索，斗兽场、梵蒂冈博物馆</p></div><span class="tl-tag ok">✅</span></div>
+          <div class="tl-item done"><div class="tl-dot"></div><div class="tl-info"><span class="tl-day">Day 4-5</span><p>佛罗伦萨，乌菲兹美术馆 + 手工皮具课</p></div><span class="tl-tag ok">✅</span></div>
           <div class="tl-item alert"><div class="tl-dot pulse"></div><div class="tl-info"><span class="tl-day">Day 6 ⚡</span><p>暴雨橙色预警，户外课程受阻</p></div><span class="tl-tag warn">⚠️</span></div>
-          <div class="tl-item"><div class="tl-dot"></div><div class="tl-info"><span class="tl-day">Day 7-9</span><p>丽江古城 + 玉龙雪山 + 东巴文化课</p></div><span class="tl-tag pending">⏳</span></div>
-          <div class="tl-item"><div class="tl-dot"></div><div class="tl-info"><span class="tl-day">Day 10-15</span><p>香格里拉 + 普达措 + 返程</p></div><span class="tl-tag pending">⏳</span></div>
+          <div class="tl-item"><div class="tl-dot"></div><div class="tl-info"><span class="tl-day">Day 7-9</span><p>米兰，大教堂 + 设计博物馆 + 意式烹饪课</p></div><span class="tl-tag pending">⏳</span></div>
+          <div class="tl-item"><div class="tl-dot"></div><div class="tl-info"><span class="tl-day">Day 10-15</span><p>威尼斯 + 运河游船 + 玻璃工艺 + 返程</p></div><span class="tl-tag pending">⏳</span></div>
         </div>
 
         <!-- Incident panel（由 app.js renderMonitorIncident 动态渲染，跟随 chat 行程）-->
         <div class="incident-card">
-          <div id="incidentEmptyHint" class="tl-empty-hint" style="display:none;">💡 在「AI 对话」中规划好行程（如「去泰国玩5天」）后，这里会根据你的目的地和天数，模拟突发状况并生成专属 Plan B 备选方案。以下为示例数据。</div>
+          <div id="incidentEmptyHint" class="tl-empty-hint" style="display:none;">💡 在「AI 对话」中规划好行程（如「去意大利玩15天」）后，这里会根据你的目的地和天数，模拟突发状况并生成专属 Plan B 备选方案。以下为示例数据。</div>
           <div id="incidentBody">
           <div class="detect-tag">
             <span class="badge auto">🤖 系统自动检测</span>
@@ -197,7 +197,7 @@
             <div class="alert-icon">🚨</div>
             <div>
               <h3>Day 6 — 暴雨橙色预警</h3>
-              <p>预计持续8小时。户外研学课程 + 洱海骑行路段受影响。</p>
+              <p>预计持续8小时。户外写生课程 + 托斯卡纳乡间路段受影响。</p>
             </div>
           </div>
 
@@ -208,7 +208,7 @@
               <strong>⭐ Plan B1 — 室内备选方案</strong>
               <span class="plan-tag rec">推荐</span>
             </div>
-            <p>大理州博物馆 + 白族扎染室内工坊，课程平移。骑行推迟至 Day 8。</p>
+            <p>佛罗伦萨乌菲兹室内导览 + 手工皮具工坊，课程平移。乡间骑行推迟至 Day 8。</p>
             <div class="plan-meta">
               <span>💰 无额外费用</span><span>📚 学习目标不变</span><span>⏰ 仅调整顺序</span>
             </div>
@@ -216,10 +216,10 @@
 
           <div class="plan-card">
             <div class="plan-head">
-              <strong>Plan B2 — 提前转移丽江</strong>
+              <strong>Plan B2 — 提前转移米兰</strong>
               <span class="plan-tag alt">备选</span>
             </div>
-            <p>提前1天去丽江。大理退1晚，丽江加1晚。Day 7课程顺延。</p>
+            <p>提前1天去米兰。佛罗伦萨退1晚，米兰加1晚。Day 7课程顺延。</p>
             <div class="plan-meta">
               <span>💰 额外 ~320元</span><span>🚌 需改签大巴</span><span>🏨 酒店退改</span>
             </div>
@@ -237,24 +237,24 @@
               <div class="och-join"><span>并行</span></div>
               <div class="och-step" data-step="2">
                 <div class="och-num">2</div>
-                <div class="och-body"><strong>预订大理州博物馆</strong><span>预订MCP: create_booking · ¥0</span></div>
+                <div class="och-body"><strong>预订佛罗伦萨乌菲兹美术馆</strong><span>预订MCP: create_booking · ¥0</span></div>
                 <span class="och-status pending">等待</span>
               </div>
               <div class="och-join"><span>并行</span></div>
               <div class="och-step" data-step="3">
                 <div class="och-num">3</div>
-                <div class="och-body"><strong>确认扎染工坊场地</strong><span>飞猪MCP: book_local · ¥0</span></div>
+                <div class="och-body"><strong>确认扎染工坊场地</strong><span>预定MCP: book_local · ¥0</span></div>
                 <span class="och-status pending">等待</span>
               </div>
               <div class="och-join"><span>依赖</span></div>
               <div class="och-step" data-step="4">
                 <div class="och-num">4</div>
-                <div class="och-body"><strong>通知学员 + 更新行程</strong><span>通知MCP: send_wechat · ¥0.75</span></div>
+                <div class="och-body"><strong>通知学员 + 更新行程</strong><span>通知MCP: send_wechat · ¥0</span></div>
                 <span class="och-status pending">等待</span>
               </div>
             </div>
             <div class="orch-summary">
-              <span>总费用 ¥0.75</span><span>预计 ≈12秒</span><span>需授权：是</span>
+              <span>总费用 ¥0</span><span>预计 ≈12秒</span><span>需授权：是</span>
             </div>
           </div>
 
@@ -384,9 +384,9 @@
         <div class="prd-block">
           <h3>4. 三大用户场景</h3>
           <p><strong>A · 长线游学知识库</strong></p>
-          <p>用户正规划为期2个月的欧洲游学，前期收集了大量小红书攻略、签证政策、个人学习计划。<strong>痛点</strong>：碎片信息难以结构化；第45天时无法回忆起第1天设定的饮食偏好或预算限制。<strong>AI方案</strong>：用户粘贴碎片→自动提取实体+约束→存入向量数据库→第45天自动激活相关记忆→主动提醒"根据Day1设定，你偏好清淡饮食"。</p>
+          <p>用户正规划意大利文化艺术游学，前期收集了大量小红书攻略、签证政策、语校与美术馆资料、个人学习计划。<strong>痛点</strong>：碎片信息难以结构化；第45天时无法回忆起第1天设定的饮食偏好或预算限制。<strong>AI方案</strong>：用户粘贴碎片→自动提取实体+约束→存入向量数据库→第45天自动激活相关记忆→主动提醒"根据Day1设定，你偏好清淡饮食"。</p>
           <p><strong>B · 复杂行程对比决策</strong></p>
-          <p>用户在"新疆15天自驾"和"云南15天游学"间纠结。<strong>痛点</strong>：信息分散（天气、机票、住宿、课程评价），多维度难以量化比较。<strong>AI方案</strong>：并行调用4个MCP Server→6维评分矩阵→用户调节权重实时重算→展示每项评分的数据来源和不确定性。</p>
+          <p>用户在"罗马"和"米兰"间纠结，不知道先去哪个城市。<strong>痛点</strong>：信息分散（天气、机票、住宿、课程评价），多维度难以量化比较。<strong>AI方案</strong>：并行调用4个MCP Server→6维评分矩阵→用户调节权重实时重算→展示每项评分的数据来源和不确定性。</p>
           <p><strong>C · 行程突发与动态调整</strong></p>
           <p>旅行途中突发状况（景点关门、极端天气航班取消）。<strong>痛点</strong>：手动查询备选方案耗时；调整涉及多个环节（课程/交通/住宿）。<strong>AI方案</strong>：天气MCP 15分钟轮询→自动检测异常→Skill: generate_plan_b 生成2-3个替代方案→用户确认→Skill: execute_rebook 编排MCP链一键执行。</p>
         </div>

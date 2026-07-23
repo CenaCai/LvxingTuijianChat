@@ -81,6 +81,8 @@ const CITY_KEYWORDS = [
   '拉萨','呼和浩特','南昌','太原','香港','台北','澳门',
   // 国内度假/小众目的地
   '三亚','大理','丽江','香格里拉','青海','甘肃','川西','稻城','新疆','云南','西藏',
+  // 意大利（本项目演示主场景）
+  '意大利','罗马','米兰','佛罗伦萨','威尼斯',
   // 国际热门目的地
   '清迈','曼谷','普吉','东京','大阪','京都','北海道','首尔','济州','巴厘岛','新加坡',
   '冰岛','瑞士','新西兰','欧洲','日本','泰国','越南','摩洛哥'
@@ -487,8 +489,8 @@ chatInput.addEventListener('input', () => {
 // ============================================
 function detect(text) {
   const t = text.toLowerCase();
-  if (t.includes('欧洲') || t.includes('游学') || t.includes('两个月') || t.includes('2个月') || t.includes('留学')) return 'europe';
-  if (t.includes('对比') || t.includes('新疆') || t.includes('云南') || t.includes('纠结') || t.includes('vs')) return 'compare';
+  if (t.includes('欧洲') || t.includes('意大利') || t.includes('游学') || t.includes('两个月') || t.includes('2个月') || t.includes('留学')) return 'europe';
+  if (t.includes('对比') || t.includes('纠结') || t.includes('vs') || t.includes('和') && (t.includes('罗马') || t.includes('米兰'))) return 'compare';
   if (t.includes('暴雨') || t.includes('预警') || t.includes('突发') || t.includes('紧急') || t.includes('取消') || t.includes('关门')) return 'emergency';
   if (t.includes('执行') && (t.includes('plan') || t.includes('b1') || t.includes('b2'))) return 'execute';
   if (t.includes('plan b2') || t.includes('planb2')) return 'planb2';
@@ -506,7 +508,13 @@ function detect(text) {
 async function aiRespond(scene, text) {
   switch (scene) {
     case 'europe': rEurope(text); break;
-    case 'compare': rCompare(); break;
+    case 'compare': {
+      const lastUser = [...chatMessages.querySelectorAll('.msg.user .msg-bubble')].pop();
+      const two = extractTwoCities(lastUser ? lastUser.textContent : '');
+      compareCtx = two || { a: '罗马', b: '米兰' };
+      rCompare();
+      break;
+    }
     case 'emergency': await rEmergency(); break;
     case 'execute': await rExecute(); break;
     case 'planb2': await rPlanB2(); break;
@@ -1366,35 +1374,82 @@ function rEurope(text) {
 // ============================================
 // Scene: Compare
 // ============================================
+// 对比上下文：演示默认罗马 vs 米兰；真实对话从用户消息解析两城市
+let compareCtx = { a: '罗马', b: '米兰' };
+
+// 罗马 / 米兰 的精选对比数据（演示用，与「意大利文化艺术游学」场景一致）
+const COMPARE_CURATED = {
+  '罗马': { icon: '🏛️', score: 89, dims: { '💰 预算可控': 78, '🎨 艺术文化': 95, '🍝 美食体验': 88, '🛍️ 购物时尚': 70, '😌 体力友好': 80, '🏛️ 历史人文': 94 } },
+  '米兰': { icon: '🛍️', score: 84, dims: { '💰 预算可控': 82, '🎨 艺术文化': 88, '🍝 美食体验': 85, '🛍️ 购物时尚': 96, '😌 体力友好': 83, '🏛️ 历史人文': 80 } },
+};
+
+// 从文本中解析出两个对比城市（基于城市白名单）
+function extractTwoCities(text) {
+  if (!text) return null;
+  const re = new RegExp('(' + CITY_REGEX_STR + ')', 'g');
+  const seen = [];
+  let m;
+  while ((m = re.exec(text)) && seen.length < 8) {
+    const c = m[1];
+    if (!seen.includes(c)) seen.push(c);
+  }
+  if (seen.length >= 2) return { a: seen[0], b: seen[1] };
+  return null;
+}
+
 function rCompare() {
+  const { a, b } = compareCtx;
+  const ca = COMPARE_CURATED[a], cb = COMPARE_CURATED[b];
+  const curated = !!(ca && cb);
+  const scoreA = ca ? ca.score : (60 + hashStr(a) % 35);
+  const scoreB = cb ? cb.score : (60 + hashStr(b) % 35);
+  const iconA = ca ? ca.icon : '📍';
+  const iconB = cb ? cb.icon : '📍';
+  const winnerIsA = scoreA >= scoreB;
+  const dims = curated
+    ? Object.keys(ca.dims).map(k => ({ label: k, av: ca.dims[k], bv: cb.dims[k] }))
+    : ['💰 预算可控', '🎨 艺术文化', '🍝 美食体验', '🛍️ 购物时尚', '😌 体力友好', '🏛️ 历史人文']
+        .map(k => ({ label: k, av: 60 + hashStr(a + k) % 35, bv: 60 + hashStr(b + k) % 35 }));
+  const dimRows = dims.map(d =>
+    `<div class="bubble-card-row"><span class="l">${d.label}</span><span class="v">${esc(a)}${d.av} · ${esc(b)}${d.bv}</span></div>`
+  ).join('');
+  const conclusion = curated
+    ? `示意结论：<strong>${iconA} ${esc(a)}（艺术文化 / 历史人文顶尖）</strong> 更契合「文化艺术游学 + 慢节奏」的偏好；若你更偏重设计 / 时尚 / 购物，<strong>${iconB} ${esc(b)}</strong> 更优。可在「方案对比」页用真实数据调权重。`
+    : `示意结论：<strong>${winnerIsA ? esc(a) : esc(b)}</strong> 综合得分略高。可在「方案对比」页输入真实目的地，由 AI 助手实时生成多维对比。`;
+  const labelA = winnerIsA
+    ? '<div style="font-size:12px;font-weight:700;color:var(--green);">⭐ 综合得分</div>'
+    : '<div style="font-size:12px;color:var(--ink2);">综合得分</div>';
+  const labelB = winnerIsA
+    ? '<div style="font-size:12px;color:var(--ink2);">综合得分</div>'
+    : '<div style="font-size:12px;font-weight:700;color:var(--green);">⭐ 综合得分</div>';
+  const mini = `
+    <div class="compare-mini">
+      <div class="compare-mini-item ${winnerIsA ? 'winner' : ''}">
+        <div>${iconA} ${esc(a)}</div>
+        <div class="big r">${scoreA}</div>
+        ${labelA}
+      </div>
+      <div class="compare-mini-item ${winnerIsA ? '' : 'winner'}">
+        <div>${iconB} ${esc(b)}</div>
+        <div class="big g">${scoreB}</div>
+        ${labelB}
+      </div>
+    </div>`;
+
   addMsg('ai', `
     <p>好问题！让我并行查询两边数据...</p>
     <p style="font-size:12px;color:var(--ink2);">🔧 同时调用：天气MCP · 航班MCP · 住宿MCP · 知识库RAG</p>
   `);
 
   addMsg('ai', `
-    <p>示意对比（演示模型 · 学习优先、体力友好）：</p>
-    <div class="compare-mini">
-      <div class="compare-mini-item">
-        <div>🏔️ 新疆自驾</div>
-        <div class="big r">64</div>
-        <div style="font-size:12px;color:var(--ink2);">综合得分</div>
-      </div>
-      <div class="compare-mini-item winner">
-        <div>🌿 云南游学</div>
-        <div class="big g">82</div>
-        <div style="font-size:12px;font-weight:700;color:var(--green);">⭐ 综合得分</div>
-      </div>
-    </div>
+    <p>示意对比（演示模型 · 文化艺术优先、体力友好）：</p>
+    ${mini}
     <div class="bubble-card">
       <div class="bubble-card-header">📊 6维度对比</div>
-      <div class="bubble-card-row"><span class="l">💰 预算可控</span><span class="v">新疆72 · 云南84</span></div>
-      <div class="bubble-card-row"><span class="l">📚 学习收益</span><span class="v">新疆58 · 云南91</span></div>
-      <div class="bubble-card-row"><span class="l">😌 体力友好</span><span class="v">新疆46 · 云南82</span></div>
-      <div class="bubble-card-row"><span class="l">🏞️ 自然体验</span><span class="v">新疆94 · 云南78</span></div>
+      ${dimRows}
     </div>
     <div class="bubble-warn">🧪 以上为示意评分（演示模型）。真实多维对比请到「方案对比」页输入目的地，由 AI 助手实时生成。</div>
-    <p>示意结论：<strong>🌿 云南15天游学</strong> 更契合学习优先的偏好。可在「方案对比」页用真实数据调权重。</p>
+    <p>${conclusion}</p>
   `);
 
   addChips(['🔍 展开详细证据', '📊 去方案对比页（真实数据）', '💾 保存对比结果']);
@@ -1811,7 +1866,7 @@ async function fetchPlanBCost(dest, days) {
       steps: [
         { name: '取消受影响户外场地', api: '预订MCP: cancel_booking', cost: 0 },
         { name: `预订${safeDest}室内替代场地`, api: '预订MCP: create_booking', cost: 0 },
-        { name: '确认特色工坊/活动', api: '飞猪MCP: book_local', cost: 0 },
+        { name: '确认特色工坊/活动', api: '预定MCP: book_local', cost: 0 },
         { name: '通知同行人 + 更新行程', api: '通知MCP: send_wechat', cost: 0 },
       ],
       notifyCost: 0,
@@ -1848,7 +1903,7 @@ function buildIncident(dest, days) {
     orphSteps: [
       { name: '取消受影响户外场地', api: '预订MCP: cancel_booking', cost: '¥0' },
       { name: `预订${dest}室内替代场地`, api: '预订MCP: create_booking', cost: '¥0' },
-      { name: '确认特色工坊/活动', api: '飞猪MCP: book_local', cost: '¥0' },
+      { name: '确认特色工坊/活动', api: '预定MCP: book_local', cost: '¥0' },
       { name: '通知同行人 + 更新行程', api: '通知MCP: send_wechat', cost: '¥0' },
     ],
   };
@@ -2048,52 +2103,60 @@ document.getElementById('demoBtn')?.addEventListener('click', async function() {
   // Clear
   chatMessages.innerHTML = '';
 
+  // 演示统一场景：意大利文化艺术游学（15天）。先注入行程状态，保证后续突发/执行阶段数据一致。
+  Object.assign(tripState, {
+    dest: '意大利', days: 15, from: '', purpose: '游学',
+    pref: { diet: '清淡', pace: '慢节奏' }, updatedAt: Date.now()
+  });
+  compareCtx = { a: '罗马', b: '米兰' };
+
   // Phase 1: Inspiration
   addMsg('ai', '<p>🎬 <strong>Phase 1/6：灵感激发</strong> — LLM意图识别+实体提取</p>');
   await sleep(600);
-  addMsg('user', '<p>我想出去玩两个月，学点东西，预算大概8万块</p>');
+  addMsg('user', '<p>我想去意大利深度游，学点语言和文化艺术，大概待半个月，预算8万</p>');
   await sleep(800);
   addMsg('ai', `
     <p>你好！从你的描述中我识别到：</p>
     <div class="bubble-card">
       <div class="bubble-card-header">🔍 意图识别结果</div>
-      <div class="bubble-card-row"><span class="l">意图</span><span class="v">长途游学规划</span></div>
-      <div class="bubble-card-row"><span class="l">时长</span><span class="v">2个月</span></div>
+      <div class="bubble-card-row"><span class="l">意图</span><span class="v">意大利文化艺术游学</span></div>
+      <div class="bubble-card-row"><span class="l">目的地</span><span class="v">意大利</span></div>
+      <div class="bubble-card-row"><span class="l">时长</span><span class="v">15天</span></div>
       <div class="bubble-card-row"><span class="l">预算</span><span class="v">¥80,000</span></div>
       <div class="bubble-card-row"><span class="l">置信度</span><span class="v">0.78（需追问）</span></div>
     </div>
-    <p>还需要确认：目的地偏好？学习方向？</p>
+    <p>还需要确认：先去哪个城市？<strong>罗马</strong>还是<strong>米兰</strong>？</p>
   `);
   await sleep(1200);
 
   // Phase 2: Knowledge + Memory
   addMsg('ai', '<p>📚 <strong>Phase 2/6：知识库+记忆</strong> — RAG检索+碎片结构化+长期记忆存储</p>');
-  addMsg('user', '<p>我想去欧洲，学语言和文化艺术，饮食清淡，不想太赶</p>');
+  addMsg('user', '<p>我想去意大利，学语言和文化艺术，饮食清淡，不想太赶</p>');
   await sleep(1000);
   addMsg('ai', `
     <p>明白了！✅ 偏好已存入长期记忆。</p>
     <div class="bubble-card">
       <div class="bubble-card-header">🧠 已保存的记忆</div>
-      <div class="bubble-card-row"><span class="l">目的地</span><span class="v">欧洲</span></div>
+      <div class="bubble-card-row"><span class="l">目的地</span><span class="v">意大利</span></div>
       <div class="bubble-card-row"><span class="l">饮食</span><span class="v">清淡</span></div>
       <div class="bubble-card-row"><span class="l">节奏</span><span class="v">慢节奏</span></div>
     </div>
-    <p>同时激活 Skill: ingest_knowledge → 知识库MCP检索匹配的学校和签证信息...</p>
+    <p>同时激活 Skill: ingest_knowledge → 知识库MCP检索匹配的语校、美术馆与签证信息...</p>
   `);
-  addMemories([{label:'目的地',value:'欧洲'},{label:'饮食',value:'清淡'},{label:'节奏',value:'慢节奏'}]);
+  addMemories([{label:'目的地',value:'意大利'},{label:'饮食',value:'清淡'},{label:'节奏',value:'慢节奏'}]);
   showToast('🧠 偏好已存入长期记忆');
   await sleep(1500);
 
   // Phase 3: Compare
   addMsg('ai', '<p>⚖️ <strong>Phase 3/6：决策对比</strong> — 并行MCP调用+多维分析</p>');
-  addMsg('user', '<p>我在新疆15天自驾和云南15天游学之间纠结</p>');
+  addMsg('user', '<p>我在罗马和米兰之间纠结，不知道先去哪个城市</p>');
   await sleep(800);
   rCompare();
   await sleep(1500);
 
   // Phase 4: Memory recall (Day 45)
   addMsg('ai', '<p>🧠 <strong>Phase 4/6：长记忆召回</strong> — 时间快进到Day 45</p>');
-  addMsg('user', '<p>（Day 45）今晚在佛罗伦萨有什么好吃的推荐？</p>');
+  addMsg('user', '<p>（Day 45）今晚在罗马有什么好吃的推荐？</p>');
   await sleep(800);
   addMsg('ai', `
     <p>让我查一下...同时检索到你的<strong>Day 1长期记忆</strong>：</p>
@@ -2102,15 +2165,16 @@ document.getElementById('demoBtn')?.addEventListener('click', async function() {
       <div class="bubble-card-row"><span class="l">🍽️ 饮食</span><span class="v">清淡、少辣</span></div>
       <div class="bubble-card-row"><span class="l">💰 预算</span><span class="v">约¥800/天</span></div>
     </div>
-    <p>推荐 <strong>Trattoria ZaZa</strong>（托斯卡纳家常菜，清淡橄榄油基底，人均€25）</p>
+    <p>推荐 <strong>Trattoria da Teo</strong>（罗马 Testaccio 老城家常菜，橄榄油清炒时蔬与海胆面，人均€25，符合你的清淡饮食）</p>
     <p style="color:var(--ink3);">💡 这就是长期记忆的价值——第45天记得第1天的偏好。</p>
   `);
   showToast('🧠 长期记忆在第45天自动激活');
   await sleep(1500);
 
   // Phase 5: Emergency
+  const demInc = buildIncident(tripState.dest, tripState.days);
   addMsg('ai', '<p>🛡️ <strong>Phase 5/6：行程守护</strong> — 系统主动监控+Plan B生成</p>');
-  addMsg('user', '<p>（系统通知）大理暴雨橙色预警！</p>');
+  addMsg('user', `<p>（系统通知）意大利行程突发「${esc(demInc.alertName)}」！</p>`);
   await sleep(600);
   await rEmergency();
   await sleep(1200);
@@ -2435,7 +2499,7 @@ function buildPlanCardHTML(trip, partySize, prefs) {
 
   function renderOpt(opts, groupName, groupIc) {
     return `<div class="psc-section">
-      <div class="psc-section-title"><span class="psc-ic">${groupIc}</span>${groupName}<span class="psc-req">请选择 1 项</span></div>
+      <div class="psc-section-title"><span class="psc-ic">${groupIc}</span>${groupName}<span class="psc-req" data-req-for="${esc(groupName)}">请选择 1 项</span></div>
       <div class="opt-row">
         ${opts.map((o, i) => `
           <button class="opt-card ${i === 0 && !o.disabled ? 'selected' : ''} ${o.disabled ? 'disabled' : ''}"
@@ -2497,15 +2561,23 @@ function attachPlanCard(msgDiv, trip, partySize, prefs) {
   function refresh() {
     let total = 0;
     const sum = [];
+    let allPicked = true;
     for (const g of Object.keys(allOpts)) {
       const i = selections[g];
       const o = allOpts[g][i];
-      sum.push(`${g}·${o.title.replace(/^[^\s]+\s/, '')}`);
-      total += o.unit * o.qty;
+      if (i === -1 || !o) {
+        sum.push(`${g}·请选择`);
+        allPicked = false;
+      } else {
+        sum.push(`${g}·${o.title.replace(/^[^\s]+\s/, '')}`);
+        total += o.unit * o.qty;
+      }
+      const reqEl = card.querySelector(`[data-req-for="${g}"]`);
+      if (reqEl) reqEl.textContent = (i === -1 || !o) ? '请选择 1 项' : '已选 1 项';
     }
     card.querySelector('[data-sum]').textContent = sum.join(' / ');
     card.querySelector('[data-total]').textContent = yuan(total);
-    card.querySelector('.psc-confirm').disabled = false;
+    card.querySelector('.psc-confirm').disabled = !allPicked;
   }
 
   card.querySelectorAll('.opt-card').forEach(b => {
@@ -2513,10 +2585,16 @@ function attachPlanCard(msgDiv, trip, partySize, prefs) {
       if (b.disabled) return;
       const g = b.dataset.group;
       const i = +b.dataset.i;
-      // 同组单选：先清掉同组 selected，再选自己
-      card.querySelectorAll(`.opt-card[data-group="${g}"]`).forEach(x => x.classList.remove('selected'));
-      b.classList.add('selected');
-      selections[g] = i;
+      if (b.classList.contains('selected')) {
+        // 已选中：再次点击 = 取消选择
+        b.classList.remove('selected');
+        selections[g] = -1;
+      } else {
+        // 未选中：同组单选，先清掉同组 selected，再选自己
+        card.querySelectorAll(`.opt-card[data-group="${g}"]`).forEach(x => x.classList.remove('selected'));
+        b.classList.add('selected');
+        selections[g] = i;
+      }
       refresh();
     });
   });
@@ -2551,7 +2629,6 @@ async function openBookingSheet(opts = {}) {
         </div>
         <button class="booking-close" aria-label="关闭">✕</button>
       </div>
-      <div class="booking-stub-note">🔌 演示下单 · 接口占位（携程问道为攻略型 API，不含下单；真实出票需接入携程商旅/开放平台）</div>
       <div class="booking-body"><p class="loading">⏳ 正在获取报价…</p></div>
       <div class="booking-foot" style="display:none;">
         <div class="booking-total">合计预估 <b class="booking-total-num">—</b> <span class="booking-est">预估价·非实时</span></div>

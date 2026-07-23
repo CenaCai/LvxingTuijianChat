@@ -192,7 +192,7 @@ app.post('/api/planb/orchestrate-cost', async (req, res) => {
       steps: [
         { name: '取消受影响户外场地', api: '预订MCP: cancel_booking', cost: 0 },
         { name: `预订${dest}室内替代场地`, api: '预订MCP: create_booking', cost: 0 },
-        { name: '确认特色工坊/活动', api: '飞猪MCP: book_local', cost: 0 },
+        { name: '确认特色工坊/活动', api: '预定MCP: book_local', cost: 0 },
         { name: '通知同行人 + 更新行程', api: '通知MCP: send_wechat', cost: notifyCost },
       ],
       notifyCost,
@@ -207,7 +207,7 @@ app.post('/api/planb/orchestrate-cost', async (req, res) => {
       steps: [
         { name: '取消受影响户外场地', api: '预订MCP: cancel_booking', cost: 0 },
         { name: `预订${dest}室内替代场地`, api: '预订MCP: create_booking', cost: 0 },
-        { name: '确认特色工坊/活动', api: '飞猪MCP: book_local', cost: 0 },
+        { name: '确认特色工坊/活动', api: '预定MCP: book_local', cost: 0 },
         { name: '通知同行人 + 更新行程', api: '通知MCP: send_wechat', cost: 0 },
       ],
       notifyCost: 0,

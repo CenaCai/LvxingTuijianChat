@@ -58,8 +58,7 @@ a { color: var(--blue); text-decoration: none; }
   display: grid;
   grid-template-columns: 240px 1fr;
   min-height: 100vh;
-  max-width: 1400px;
-  margin: 0 auto;
+  width: 100%;
 }
 
 /* ===== Sidebar ===== */
@@ -177,7 +176,8 @@ a { color: var(--blue); text-decoration: none; }
   display: grid;
   grid-template-columns: 1fr 300px;
   gap: 24px;
-  height: calc(100vh - 120px);
+  height: calc(100vh - 64px);
+  min-height: 420px;
 }
 
 .chat-panel {
@@ -187,6 +187,7 @@ a { color: var(--blue); text-decoration: none; }
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  min-width: 0;
   box-shadow: var(--shadow-xs);
 }
 
@@ -202,7 +203,7 @@ a { color: var(--blue); text-decoration: none; }
 .chat-msg {
   display: flex;
   gap: 12px;
-  max-width: 88%;
+  max-width: 92%;
   animation: msgIn 0.3s ease-out;
 }
 
@@ -400,6 +401,7 @@ a { color: var(--blue); text-decoration: none; }
 /* Context panel */
 .context-panel {
   display: flex; flex-direction: column; gap: 16px;
+  min-width: 0;
 }
 
 .ctx-card {
@@ -967,6 +969,7 @@ a { color: var(--blue); text-decoration: none; }
 
 @media (max-width: 768px) {
   .app-shell { grid-template-columns: 1fr; }
+  .chat-layout { height: calc(100vh - 40px); }
   .sidebar {
     position: static; height: auto; flex-direction: row;
     flex-wrap: wrap; gap: 8px; padding: 12px;
@@ -1236,11 +1239,6 @@ a { color: var(--blue); text-decoration: none; }
   flex-shrink: 0; transition: var(--transition);
 }
 .booking-close:hover { background: var(--border); color: var(--ink); }
-.booking-stub-note {
-  margin: 0 20px 14px; font-size: 11.5px; line-height: 1.55;
-  color: #92400e; background: #fff7ed; border: 1px solid #fed7aa;
-  border-radius: 10px; padding: 8px 12px;
-}
 .booking-body { padding: 0 20px; }
 .booking-trip { font-size: 13px; color: var(--ink2); margin-bottom: 12px; }
 .booking-trip b { color: var(--ink); }
