@@ -181,11 +181,10 @@ app.post('/api/planb/orchestrate-cost', async (req, res) => {
   const days = Number(req.body && req.body.days) || 5;
   try {
     // TODO: 接入真实 MCP 价格服务，按 dest/days/plan 返回各步费用
-    // 当前为演示模型：前 3 步取消/预订/确认默认 ¥0；第 4 步通知费按目的地稳定派生
+    // 当前为演示模型：所有步骤 ¥0（前端文案与后端口径保持一致）
     const seed = hashStr(dest);
-    const notifyCost = ((seed % 4) + 1) * 0.25;          // ¥0.25 / 0.5 / 0.75 / 1.0
     const rebookCost = 80 + (seed % 120);                // B2 酒店退改 + 交通改签 ¥80–199
-    const b2total = rebookCost + Math.round(notifyCost); // B2 净增费用
+    const b2total = rebookCost;                          // B2 净增费用（通知费为 0）
     res.json({
       dest,
       days,
@@ -193,9 +192,9 @@ app.post('/api/planb/orchestrate-cost', async (req, res) => {
         { name: '取消受影响户外场地', api: '预订MCP: cancel_booking', cost: 0 },
         { name: `预订${dest}室内替代场地`, api: '预订MCP: create_booking', cost: 0 },
         { name: '确认特色工坊/活动', api: '预定MCP: book_local', cost: 0 },
-        { name: '通知同行人 + 更新行程', api: '通知MCP: send_wechat', cost: notifyCost },
+        { name: '通知同行人 + 更新行程', api: '通知MCP: send_wechat', cost: 0 },
       ],
-      notifyCost,
+      notifyCost: 0,
       rebookCost,
       b2total,
     });
