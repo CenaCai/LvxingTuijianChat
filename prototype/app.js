@@ -127,6 +127,8 @@ function saveTrip() {
   try { localStorage.setItem(TRIP_KEY, JSON.stringify(tripState)); } catch {}
 }
 let tripState = loadTrip();
+// 兜底：老版本 localStorage 数据可能没 purpose 字段，确保 schema 一致
+if (tripState && typeof tripState.purpose === 'undefined') tripState.purpose = '';
 resetTripLabelStateForDest(tripState && tripState.dest);
 
 // 中文数字 → 阿拉伯数字（用于「五天」「十五天」等）
@@ -152,11 +154,37 @@ function updateTripFromInput(text, opts) {
   const oldDest = trip.dest || '';
 
   // 目的地关键词（先解析，让后面的"子行程保护"能感知到本轮是否切换了目的地）。
-  // 用 lookbehind (?<![从]) 排除「从上海出发」短语里的「上海」误识别为目的地——
-  // 出发地有自己的解析路径（FROM_CITIES 白名单），避免两类 regex 抢同一个城市。
-  // 兜底：若 lookbehind 后没找到，放开限制，让「从北京出发去北京」这种同城游也能识别出目的地。
-  let dest = t.match(new RegExp('(?<![从])(' + CITY_REGEX_STR + ')'));
-  if (!dest) dest = t.match(new RegExp('(' + CITY_REGEX_STR + ')'));
+  //
+  // 背景坑：把"我想去香港"里的"香港"识别成 dest 很容易，但用户经常会在同一句里
+  // 同时提到出发地/位置/起点（如"我现在在成都，想去香港"）。如果只看"城市在文中出现"
+  // 就会错把"成都"当成 dest、"香港"被错过；或者把"从上海出发"里的"上海"当成 dest。
+  //
+  // 解法：
+  // 1) 加更严格的 lookbehind `(?<![从在位于驻现到])`，
+  //    排除「从X/在X/位于X/驻X/现在在X/到这里X/到那里X」短语里的 X；
+  // 2) 但兜底（没匹配到时）放开限制，让「我在北京，想去北京」这种同城游也能识别出目的地；
+  // 3) 优先匹配「想去X / 去X / 到X / X出差 / X几天」这种**强目的地信号**，避免被
+  //    句子开头的"现在在"上下文干扰。
+  const STRONG_DEST_RE = new RegExp(
+    '(?:想去|想去去|想去\\s|去|到)\\s*(' + CITY_REGEX_STR + ')' +
+    '|(' + CITY_REGEX_STR + ')(?:出差|几天|几日|旅游|旅行|玩|游|几天玩|几日玩)'
+  );
+  const strong = t.match(STRONG_DEST_RE);
+  // 提取 strong 里的第一个非空捕获组
+  let dest = null;
+  if (strong) {
+    dest = [strong[0], strong[1] || strong[2], strong.index + (strong[1] ? strong[0].indexOf(strong[1]) : 0)];
+  }
+  if (!dest) {
+    // 弱匹配：句子中任意城市，但要排除"在X/从X/位于X/现在在X"短语里的 X
+    const weak = t.match(new RegExp('(?<![从在位于驻现])(?:[^一-龥]|^)(' + CITY_REGEX_STR + ')'));
+    if (weak) dest = [weak[0], weak[1], weak.index + (weak[0].length - weak[1].length)];
+  }
+  if (!dest) {
+    // 兜底：纯字面 + 任何位置（覆盖「从北京出发去北京」同城游和首问场景）
+    const plain = t.match(new RegExp('(' + CITY_REGEX_STR + ')'));
+    if (plain) dest = [plain[0], plain[1], plain.index];
+  }
   let destChanged = false;
   if (dest && dest[1] !== trip.dest) {
     // 目的地切换时，重置沿用/排除状态、清空旧出发地，并加载新目的地对应的选择
@@ -181,28 +209,78 @@ function updateTripFromInput(text, opts) {
       let isSubTrip = false;
       if (!options.isClarify) {
         const before = t.slice(0, dm.index);
-        // 同样排除「从X」短语里的 X；只把「真正的 N天前出现的城市」当作子行程信号
-        const beforeCity = before.match(new RegExp('(?<![从])(' + CITY_REGEX_STR + ')'));
-        const isMainDestInBefore = beforeCity && beforeCity[0] === trip.dest;
+        // 同样排除「从/在/位于/现在在 X」短语里的 X；只把「真正的 N天前出现的城市」当作子行程信号
+        const beforeCity = before.match(new RegExp('(?<![从在位于驻现])(' + CITY_REGEX_STR + ')'));
+        const isMainDestInBefore = beforeCity && beforeCity[1] === trip.dest;
         isSubTrip = beforeCity && !isMainDestInBefore && n < (trip.days || 0);
       }
       if (!isSubTrip) { trip.days = n; changed = true; }
     }
   }
 
-  // 出发地：用「从X出发」或「^X出发」明确锁定城市边界，再用白名单过滤，
-  // 避免旧正则 `/(?:从)?([\u4e00-\u9fa5]{2,6})出发/` 的贪婪误匹配
-  // （如「我想从北京出发」会匹配成 from="想从北京"5字，或「明天上海出发」→「明天上海」）。
-  // 1) 优先「从X出发」显式模式
+  // 出发地解析：支持 3 种句式
+  //   1) 显式「从X出发」「X出发」（必须白名单城市，否则噪声太大）
+  //   2)「现在在X」「在X」「位于X」「驻X」—— 用户描述当前位置/居住地，强烈暗示出发地
+  //   3)「X过去」「X飞过来」—— 用户从某地过来，但这种表达较生僻，先不覆盖
+  // 老 bug：原 `/(?:从)?([\u4e00-\u9fa5]{2,6})出发/` 贪婪，如「我想从北京出发」匹配成
+  //   from="想从北京"5字；用 (?:从|^)X 模式 + 白名单修复。
+  // 新坑：「我现在在成都」没"出发"二字，旧 regex 漏掉。补充"现在在X"/"在X"模式。
   const FROM_CITIES = ['北京','上海','广州','深圳','成都','重庆','杭州','南京','武汉','西安','天津','苏州','长沙','郑州','沈阳','青岛','宁波','东莞','无锡','厦门','福州','昆明','大连','哈尔滨','长春','石家庄','济南','合肥','南宁','贵阳','海口','兰州','银川','西宁','乌鲁木齐','拉萨','呼和浩特','南昌','太原','香港','台北','澳门'];
   let fromCity = null;
+  // 1) 显式「从X出发」「X出发」
   const mFrom1 = t.match(/(?:从|^)([\u4e00-\u9fa5]{2,4})出发/);
   if (mFrom1) {
     const hit = FROM_CITIES.find(c => c === mFrom1[1]);
     if (hit) fromCity = hit;
   }
+  // 2) 「现在在X」「位于X」「驻X」（强信号）—— 仅在还没识别出来 from 时启用
+  if (!fromCity) {
+    const mFrom2 = t.match(/(?:现在在|现在位于|我在|位于|驻)([\u4e00-\u9fa5]{2,4})(?![出发去到])/);
+    if (mFrom2) {
+      const hit = FROM_CITIES.find(c => c === mFrom2[1]);
+      if (hit) fromCity = hit;
+    }
+  }
+  // 3) 兜底：「在X」（单独的"在"）—— 太宽，必须同时满足：X 是白名单城市 + 句中没有
+  //   强目的地信号（如"想去X"），否则会跟 dest 抢词。保守起见放在弱信号位
+  if (!fromCity) {
+    const mFrom3 = t.match(/(?:^|[^一-龥])在([\u4e00-\u9fa5]{2,4})(?:[，,。]|$)/);
+    if (mFrom3) {
+      const hit = FROM_CITIES.find(c => c === mFrom3[1]);
+      if (hit && (!dest || dest[1] !== hit)) fromCity = hit;
+    }
+  }
   const from = fromCity ? [null, fromCity] : null;
   if (from && from[1] !== trip.from) { trip.from = from[1]; changed = true; }
+
+  // 出行目的（公派出差/商务/旅游等）—— 关键槽位，让澄清追问不再问"是去出差还是旅行"
+  // 优先级：先匹配最长组合（公派出差），再回落到单字（公派/出差）
+  const purposeMap = [
+    [/公派出差/, '公派出差'],
+    [/商务出差/, '商务出差'],
+    [/会议出差/, '会议出差'],
+    [/参展(?!览)/, '参展'],
+    [/出差/, '出差'],
+    [/商务/, '商务出行'],
+    [/考察/, '考察'],
+    [/探亲/, '探亲'],
+    [/访友/, '访友'],
+    [/就医|医疗/, '就医'],
+    [/留学|游学/, '留学/游学'],
+    [/学习/, '学习'],
+    [/自由行/, '自由行'],
+    [/跟团(游|游)?/, '跟团游'],
+    [/度假|休闲游/, '度假'],
+    [/旅游|旅行/, '旅行'],
+  ];
+  let purpose = null;
+  for (const [re, label] of purposeMap) {
+    if (re.test(t)) { purpose = label; break; }
+  }
+  if (purpose && purpose !== (trip.purpose || '')) {
+    trip.purpose = purpose;
+    changed = true;
+  }
 
   if (changed) {
     trip.updatedAt = Date.now();
@@ -220,6 +298,7 @@ function updateTripFromInput(text, opts) {
     hasDest: !!dest,    // 本轮正则是否匹配到目的地
     hasDays: !!dm,      // 本轮正则是否匹配到时长
     hasFrom: !!from,    // 本轮正则是否匹配到出发地
+    hasPurpose: !!purpose,  // 本轮正则是否匹配到出行目的
     destConflict,       // { from, to } 或 null
     oldDest,            // 本轮更新前的旧目的地（可能为 ''）
   };
@@ -1143,7 +1222,7 @@ function updateDestinationMemory(oldDest, newDest) {
 
 // 把 tripState.dest 回滚到旧值（卡片选了「沿用旧」时调用）
 function rollbackDestination(oldDest) {
-  if (!tripState) tripState = { dest: '', days: 0, from: '', updatedAt: Date.now() };
+  if (!tripState) tripState = { dest: '', days: 0, from: '', purpose: '', updatedAt: Date.now() };
   tripState.dest = oldDest;
   tripState.from = '';   // 旧出发地残留一并清空（用户没说，不要回填）
   tripState.updatedAt = Date.now();
@@ -1178,10 +1257,14 @@ function enterClarifyMode(tripMems, stageWrap, injectable, parsed) {
   const prefillFrom = p.hasFrom
     ? ((tripState && tripState.from) ? tripState.from : '')
     : '';
+  // 出行目的：用户本轮若说"公派出差"就预填，避免追问"是去出差还是旅行"
+  const prefillPurpose = p.hasPurpose
+    ? ((tripState && tripState.purpose) ? tripState.purpose : '')
+    : '';
   clarifyState = {
     active: true,
     dest: (tripState && tripState.dest) || '',
-    collected: { days: prefillDays, purpose: '', budget: '', from: prefillFrom, notes: '' }
+    collected: { days: prefillDays, purpose: prefillPurpose, budget: '', from: prefillFrom, notes: '' }
   };
   // 从已确认的历史行程记忆里预填时长/总预算，减少重复提问
   if (injectable && injectable.length) {
@@ -2083,9 +2166,9 @@ function clearAllMemories() {
   extractedMemories = [];
   confirmedTripMemLabels.clear();
   rejectedTripMemLabels.clear();
-  // 行程状态也一并清零，避免残留 dest/days/from 被后续 enterClarifyMode 沿用为默认值
+  // 行程状态也一并清零，避免残留 dest/days/from/purpose 被后续 enterClarifyMode 沿用为默认值
   // （"删除所有设定"语义=完全从零开始，不只是清掉记忆库）
-  tripState = { dest: '', days: 0, from: '', updatedAt: Date.now() };
+  tripState = { dest: '', days: 0, from: '', purpose: '', updatedAt: Date.now() };
   // 澄清状态也复位，防止下一次新建会话时残留槽位污染新行程
   clarifyState = { active: false, dest: '', collected: { days: 0, purpose: '', budget: '', from: '', notes: '' } };
   // 清掉当前目的地对应的沿用/排除历史，避免下一位新行程自动继承
