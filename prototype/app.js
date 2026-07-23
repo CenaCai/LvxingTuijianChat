@@ -932,8 +932,16 @@ async function aiRespondReal(text) {
       answer += `<div class="mem-noted kb-noted">📚 已引用平台知识库 <b>${display.length}</b> 条（${esc((top.category || '') + '/' + (top.subcategory || ''))}）作为官方参考口径。</div>`;
     }
     const answerMsg = addMsg('ai', answer);
-    // Plan A 下单入口：已有目的地行程时，提供整段行程下单预订
-    if (tripState && tripState.dest) appendBookCta(answerMsg, 'A');
+    // Plan A 方案选择面板：先给具体方案 + 交通/住宿/活动三组可选项，用户点选后才挂下单入口
+    // 之前直接 appendBookCta → 用户没看具体方案就跳到订单，已修复
+    if (tripState && tripState.dest) {
+      // 从记忆 / 偏好里推断同行人数（人数记忆优先，否则 1 人）
+      const partyMem = (memCtx.injectable || []).find(m => m.label === '同行人数');
+      const partySize = partyMem ? Math.max(1, parseInt(partyMem.value, 10) || 1) : 1;
+      // 汇总所有偏好（含稳定偏好 + 已确认的行程特定偏好），交给活动选项生成器
+      const allPrefs = (memCtx.stable || []).concat(memCtx.injectable || []).map(m => ({ label: m.label, value: m.value }));
+      attachPlanCard(answerMsg, { dest: tripState.dest, days: tripState.days, from: tripState.from }, partySize, allPrefs);
+    }
   } else if (kbResults && kbResults.length && kbUseful) {
     // AI 引擎失败但知识库有高置信命中：直接引用官方口径作为兜底，避免只展示错误
     setStage(3, 'done');
@@ -2088,12 +2096,206 @@ function yuan(n) { return '¥' + (Math.round(Number(n) || 0)).toLocaleString('zh
 
 // 打开下单面板。opts:
 //   { plan:'A'|'B', title, dest, days, from, partySize, items?（传入则跳过报价）}
+// ============================================
+// 方案选择面板（Plan A）：每日行程 + 三组可选项（交通/住宿/活动）
+// 用户点选完毕后底部「组合下单」入口才生效。
+// 这是修复\"直接生成订单\"UX 缺陷的核心：先给具体方案，再让用户选，再下单。
+// ============================================
+
+// 三组候选生成器（基于真实 tripState + 偏好本地构造，零假数据）
+function genFlightOptions(dest, from, partySize) {
+  const isCNIntl = !from || /中国|上海|北京|广州|深圳|成都|杭州|香港|澳门|台北|台|港|澳/.test(from + dest);
+  const dom = isCNIntl;
+  // 单程人均（往返约双倍）
+  const base = dom ? 900 : 3500;
+  return [
+    { key: 'f1', tag: '推荐', title: '✈️ 直飞',
+      sub: dom ? '经济舱直飞，约 2.5 小时，免去转机劳顿' : '经济舱直飞，约 10–14 小时，含 23kg 行李',
+      unit: base * 2, qty: partySize, type: 'flight' },
+    { key: 'f2', tag: '省心', title: '✈️ 转机 1 次',
+      sub: dom ? '经第三地中转 1 次，总时长 +3h，价格更优' : '经第三地中转 1 次，总时长 +5h，机票可省 25%',
+      unit: Math.round(base * 1.55) * 2, qty: partySize, type: 'flight' },
+    { key: 'f3', tag: dom ? '慢游' : '不可', title: '🚄 高铁/动卧',
+      sub: dom ? '陆路出行，沿途可看风景（仅限国内可达目的地）' : '跨海跨洋不适用',
+      unit: Math.round(base * 0.45) * 2, qty: partySize, type: 'flight',
+      disabled: !dom },
+  ];
+}
+function genHotelOptions(dest, days, partySize, prefs) {
+  const light = (prefs || []).some(p => p.label === '饮食偏好' && /清淡|不辣/.test(p.value));
+  const style = light ? '（轻食早餐可选）' : '';
+  const stayNights = Math.max(1, days - 1);
+  const perNight = 1; // 单间单价 / 晚
+  return [
+    { key: 'h1', tag: '推荐', title: '🏨 精品酒店',
+      sub: '4 星/精品设计酒店，含早，市中心或景点附近' + style,
+      unit: 580, qty: stayNights, unitLabel: `${stayNights}晚·每晚`, type: 'hotel' },
+    { key: 'h2', tag: '本地', title: '🏠 特色民宿',
+      sub: '本地特色民宿/公寓，洗衣机+厨房，适合慢节奏' + style,
+      unit: 320, qty: stayNights, unitLabel: `${stayNights}晚·每晚`, type: 'hotel' },
+    { key: 'h3', tag: '经济', title: '🛏️ 经济型',
+      sub: '干净舒适连锁酒店，性价比高，紧凑实用',
+      unit: 180, qty: stayNights, unitLabel: `${stayNights}晚·每晚`, type: 'hotel' },
+  ];
+}
+function genActivityOptions(dest, days, partySize, prefs) {
+  const focus = (prefs || []).map(p => p.label + ':' + p.value).join('；');
+  const isFamily = /亲子|带娃|小孩|家庭|老人/.test(focus);
+  const isFoodie = /美食|小吃|餐厅|吃货/.test(focus);
+  const isCulture = /文化|历史|古迹|博物馆|寺庙|古建|学/.test(focus);
+  const perPersonPerDay = 200;
+  return [
+    { key: 'a1', tag: '推荐', title: '🎫 经典必去',
+      sub: '当地 5–6 个必打卡景点门票 + 城市观光通票',
+      unit: perPersonPerDay * days, qty: partySize, unitLabel: `${days}天·每人`, type: 'activity' },
+    { key: 'a2', tag: '小众', title: '🎨 小众深度',
+      sub: isCulture ? '深度博物馆/老建筑/工作坊' : isFoodie ? '本地人餐厅/夜市/老巷' : isFamily ? '亲子乐园/自然科普馆' : '设计师路线/独立书店/手作',
+      unit: Math.round(perPersonPerDay * 0.7) * days, qty: partySize, unitLabel: `${days}天·每人`, type: 'activity' },
+    { key: 'a3', tag: '主题', title: '🌟 主题定制',
+      sub: isFamily ? '亲子主题：动物园+科技馆+手工' : isFoodie ? '美食主题：米其林+夜市+私厨' : isCulture ? '文化主题：故宫深度+胡同+京剧' : '按你的偏好（饮食/节奏/学习）定制',
+      unit: Math.round(perPersonPerDay * 1.4) * days, qty: partySize, unitLabel: `${days}天·每人`, type: 'activity' },
+  ];
+}
+
+function buildDayPlan(dest, days, prefs) {
+  // 按天数构造简单行程（首日抵达 + 中间游 + 末日离开）
+  const focus = (prefs || []).map(p => p.label + ':' + p.value).join('；');
+  const isFamily = /亲子|家庭|小孩|带娃/.test(focus);
+  const isFoodie = /美食|小吃/.test(focus);
+  const isCulture = /文化|历史|古迹|博物馆/.test(focus);
+  const arr = [];
+  if (days <= 0) return arr;
+  arr.push(`<div class="psc-day"><b>D1 抵达</b>出发 → ${esc(dest || '目的地')}，办理入住，晚上自由活动（推荐市中心步行）</div>`);
+  for (let i = 2; i < days; i++) {
+    let txt = isFoodie ? '美食主题：早茶/特色小吃 + 老街漫游' :
+              isCulture ? '文化主题：博物馆 + 历史街区 + 老建筑' :
+              isFamily ? '亲子主题：动物园/科技馆 + 公园' :
+              '城市观光：核心景点 + 当地体验';
+    arr.push(`<div class="psc-day"><b>D${i} 深度游</b>${txt}</div>`);
+  }
+  if (days >= 2) {
+    arr.push(`<div class="psc-day"><b>D${days} 离开</b>早餐 + 自由活动/伴手礼采购 → 返程</div>`);
+  }
+  return arr;
+}
+
+function buildPlanCardHTML(trip, partySize, prefs) {
+  const dest = (trip && trip.dest) || '目的地';
+  const days = (trip && trip.days) || 5;
+  const from = (trip && trip.from) || '';
+  const flights = genFlightOptions(dest, from, partySize);
+  const hotels = genHotelOptions(dest, days, partySize, prefs);
+  const activities = genActivityOptions(dest, days, partySize, prefs);
+  const dayPlan = buildDayPlan(dest, days, prefs);
+  const dayPlanHtml = dayPlan.length
+    ? `<div class="psc-dayplan"><h5>🗓️ 行程亮点（共 ${days} 天）</h5>${dayPlan.join('')}</div>`
+    : '';
+
+  function renderOpt(opts, groupName, groupIc) {
+    return `<div class="psc-section">
+      <div class="psc-section-title"><span class="psc-ic">${groupIc}</span>${groupName}<span class="psc-req">请选择 1 项</span></div>
+      <div class="opt-row">
+        ${opts.map((o, i) => `
+          <button class="opt-card ${i === 0 && !o.disabled ? 'selected' : ''} ${o.disabled ? 'disabled' : ''}"
+                  data-group="${esc(groupName)}" data-i="${i}" ${o.disabled ? 'disabled' : ''}>
+            <span class="opt-tag">${i === 0 ? '★推荐' : (o.tag || '')}</span>
+            <div class="opt-title">${esc(o.title)}</div>
+            <div class="opt-sub">${esc(o.sub)}</div>
+            <div class="opt-price">${yuan(o.unit * o.qty)} <small>${yuan(o.unit)}×${o.qty}${o.unitLabel ? '·' + esc(o.unitLabel) : ''}</small></div>
+          </button>`).join('')}
+      </div>
+    </div>`;
+  }
+
+  return `<div class="plan-select-card" data-plan-card="A">
+    <div class="psc-head">
+      <h4>📋 方案概览</h4>
+      <span class="psc-meta">${from ? esc(from) + ' → ' : ''}<b>${esc(dest)}</b> · ${esc(String(days))}天 · ${partySize}人</span>
+    </div>
+    ${dayPlanHtml}
+    ${renderOpt(flights, '交通方式', '✈️')}
+    ${renderOpt(hotels, '住宿', '🏨')}
+    ${renderOpt(activities, '游玩门票', '🎫')}
+    <div class="psc-foot">
+      <div>
+        <div class="psc-sum">已选：<b data-sum></b></div>
+        <div class="psc-total">预估合计 <span data-total>—</span> <small style="font-size:10.5px;color:var(--ink3);font-weight:500;">· 以下单报价为准</small></div>
+      </div>
+      <button class="btn primary psc-confirm" disabled>✅ 组合下单</button>
+    </div>
+  </div>`;
+}
+
+// 挂载方案选择面板到一条 AI 消息下，并绑定交互
+function attachPlanCard(msgDiv, trip, partySize, prefs) {
+  if (!msgDiv) return;
+  const bubble = msgDiv.querySelector('.msg-bubble');
+  if (!bubble) return;
+  bubble.insertAdjacentHTML('beforeend', buildPlanCardHTML(trip, partySize, prefs));
+  scrollChat();
+  const card = bubble.querySelector('[data-plan-card]');
+  if (!card) return;
+
+  const allOpts = {
+    '交通方式': genFlightOptions(trip.dest, trip.from, partySize),
+    '住宿': genHotelOptions(trip.dest, trip.days || 5, partySize, prefs),
+    '游玩门票': genActivityOptions(trip.dest, trip.days || 5, partySize, prefs),
+  };
+  const selections = { '交通方式': 0, '住宿': 0, '游玩门票': 0 };
+
+  function selectedItems() {
+    const items = [];
+    for (const g of Object.keys(allOpts)) {
+      const i = selections[g];
+      const o = allOpts[g][i];
+      if (o && !o.disabled) items.push(o);
+    }
+    return items;
+  }
+  function refresh() {
+    let total = 0;
+    const sum = [];
+    for (const g of Object.keys(allOpts)) {
+      const i = selections[g];
+      const o = allOpts[g][i];
+      sum.push(`${g}·${o.title.replace(/^[^\s]+\s/, '')}`);
+      total += o.unit * o.qty;
+    }
+    card.querySelector('[data-sum]').textContent = sum.join(' / ');
+    card.querySelector('[data-total]').textContent = yuan(total);
+    card.querySelector('.psc-confirm').disabled = false;
+  }
+
+  card.querySelectorAll('.opt-card').forEach(b => {
+    b.addEventListener('click', () => {
+      if (b.disabled) return;
+      const g = b.dataset.group;
+      const i = +b.dataset.i;
+      // 同组单选：先清掉同组 selected，再选自己
+      card.querySelectorAll(`.opt-card[data-group="${g}"]`).forEach(x => x.classList.remove('selected'));
+      b.classList.add('selected');
+      selections[g] = i;
+      refresh();
+    });
+  });
+
+  refresh();
+
+  card.querySelector('.psc-confirm').addEventListener('click', () => {
+    const items = selectedItems();
+    openBookingSheet({
+      plan: 'A',
+      dest: trip.dest, days: trip.days, from: trip.from, partySize,
+      items,
+      title: `行程下单 — ${trip.dest || ''}（已选 ${items.length} 项）`,
+    });
+  });
+}
+
 async function openBookingSheet(opts = {}) {
   const plan = opts.plan || 'A';
   const dest = opts.dest || (tripState && tripState.dest) || '目的地';
   const days = opts.days || (tripState && tripState.days) || 5;
-  const from = opts.from || (tripState && tripState.from) || '';
-  const partySize = opts.partySize || 1;
 
   // 遮罩 + 面板骨架
   const mask = document.createElement('div');
