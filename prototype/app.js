@@ -573,8 +573,8 @@ function extractClarifyDays(text) {
 }
 function extractClarifyBudget(text) {
   const t = (text || '').toLowerCase();
-  // 免费 / 零预算
-  if (/免费|不花钱|预算0|零预算|0元/.test(t)) return '0元/免费';
+  // 免费 / 零预算（注意：必须排除 "2000元/1500元/5000元" 这类百位以上数字里的 "0元" 子串）
+  if (/(?<![0-9.])0元(?![0-9])|(?<![0-9.])0块(?![0-9])|不花钱|零预算|0预算|预算零|预算是0|预算是0元|免费/.test(t)) return '0元/免费';
   // 中文近似金额（无阿拉伯数字时兜底）
   if (/一两?百/.test(t)) return fmtYuan(200);
   if (/两三百/.test(t)) return fmtYuan(300);
@@ -1007,12 +1007,14 @@ function enterClarifyMode(tripMems, stageWrap, injectable) {
     tripMems.forEach(m => rejectedTripMemLabels.add(m.label));
     saveTripLabelState();
   }
-  // 注意：不再从 tripState 预填 days/from，避免历史行程残留污染新行程
-  // （之前的 bug：清空记忆但 tripState 没清，导致下一轮"我想去北京"被预填上 5 天）
+  // 预填策略：仅采纳「本轮」已从输入解析出的事实（tripState.days/from>0），
+  // 避免历史残留污染新行程；删除设定后 tripState 已被清空（days=0），自然不会预填。
+  const prefillDays = (tripState && tripState.days > 0) ? tripState.days : 0;
+  const prefillFrom = (tripState && tripState.from && tripState.from !== (tripState && tripState.dest)) ? tripState.from : '';
   clarifyState = {
     active: true,
     dest: (tripState && tripState.dest) || '',
-    collected: { days: 0, purpose: '', budget: '', from: '', notes: '' }
+    collected: { days: prefillDays, purpose: '', budget: '', from: prefillFrom, notes: '' }
   };
   // 从已确认的历史行程记忆里预填时长/总预算，减少重复提问
   if (injectable && injectable.length) {
