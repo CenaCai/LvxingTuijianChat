@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>CSTS TravelChat — 您的AI 差旅助手</title>
+  <title data-i18n="CSTS TravelChat — 您的AI 差旅助手">CSTS TravelChat — 您的AI 差旅助手</title>
   <link rel="stylesheet" href="./styles.css" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Noto+Sans+SC:wght@400;500;600;700;900&display=swap" rel="stylesheet" />
@@ -17,36 +17,41 @@
       <div class="logo-icon"><img src="./icon.png" alt="CSTS" /></div>
       <div>
         <strong>CSTS TravelChat</strong>
-        <span>您的AI 差旅助手工作台</span>
+        <span data-i18n="您的AI 差旅助手工作台">您的AI 差旅助手工作台</span>
       </div>
+    </div>
+
+    <div class="lang-switch" id="langSwitch">
+      <button class="lang-btn is-active" data-lang="zh">中</button>
+      <button class="lang-btn" data-lang="en">EN</button>
     </div>
 
     <nav class="nav">
       <button class="nav-item is-active" data-view="chat">
-        <span class="nav-icon">💬</span> AI 对话
+        <span class="nav-icon">💬</span> <span data-i18n="AI 对话">AI 对话</span>
       </button>
       <button class="nav-item" data-view="compare">
-        <span class="nav-icon">⚖️</span> 方案对比
+        <span class="nav-icon">⚖️</span> <span data-i18n="方案对比">方案对比</span>
       </button>
       <button class="nav-item" data-view="monitor">
-        <span class="nav-icon">🛡️</span> 行程监控
+        <span class="nav-icon">🛡️</span> <span data-i18n="行程监控">行程监控</span>
       </button>
       <button class="nav-item" data-view="memory">
-        <span class="nav-icon">🧠</span> 记忆中心
+        <span class="nav-icon">🧠</span> <span data-i18n="记忆中心">记忆中心</span>
       </button>
       <button class="nav-item" data-view="prd">
-        <span class="nav-icon">📄</span> PRD 文档
+        <span class="nav-icon">📄</span> <span data-i18n="PRD 文档">PRD 文档</span>
       </button>
     </nav>
 
     <div class="sidebar-footer">
       <div class="demo-card">
-        <p>🎬 不知道从哪开始？</p>
-        <button class="demo-btn" id="demoBtn">▶ 演示完整流程</button>
+        <p data-i18n="🎬 不知道从哪开始？">🎬 不知道从哪开始？</p>
+        <button class="demo-btn" id="demoBtn" data-i18n="▶ 演示完整流程">▶ 演示完整流程</button>
       </div>
       <div class="status-badge" id="statusBadge">
         <span class="status-dot"></span>
-        <span id="statusText">就绪</span>
+        <span id="statusText" data-i18n="就绪">就绪</span>
       </div>
     </div>
   </aside>
@@ -63,13 +68,13 @@
             <div class="chat-msg ai">
               <div class="msg-avatar"><img src="./icon.png" alt="CSTS" /></div>
               <div class="msg-bubble">
-                <p>你好！我是您的 AI 差旅助手 <strong>CSTS TravelChat</strong> 🧳</p>
-                <p>在下方输入你的旅行想法，会由 <strong>AI 助手</strong> 实时回答（酒店 / 机票 / 火车票 / 景点 / 玩乐）。试试告诉我你的旅行想法吧～</p>
+                <p data-i18n="你好！我是您的 AI 差旅助手 <strong>CSTS TravelChat</strong> 🧳">你好！我是您的 AI 差旅助手 <strong>CSTS TravelChat</strong> 🧳</p>
+                <p data-i18n="在下方输入你的旅行想法，会由 <strong>AI 助手</strong> 实时回答（酒店 / 机票 / 火车票 / 景点 / 玩乐）。试试告诉我你的旅行想法吧～">在下方输入你的旅行想法，会由 <strong>AI 助手</strong> 实时回答（酒店 / 机票 / 火车票 / 景点 / 玩乐）。试试告诉我你的旅行想法吧～</p>
               </div>
             </div>
           </div>
           <div class="chat-input-area">
-            <textarea id="chatInput" placeholder="描述你的旅行想法..." rows="1"></textarea>
+            <textarea id="chatInput" data-i18n-ph="描述你的旅行想法..." placeholder="描述你的旅行想法..." rows="1"></textarea>
             <button class="send-btn" id="sendBtn">
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M2 21L23 12 2 3v7l15 2-15 2v7z" fill="currentColor"/></svg>
             </button>
@@ -80,15 +85,15 @@
         <div class="context-panel" id="contextPanel">
           <div class="ctx-card" id="ctxDefault">
             <div class="ctx-icon">💡</div>
-            <h3>AI 会记住这些</h3>
-            <p>你的偏好会随对话沉淀为长期记忆，跨行程复用。</p>
+            <h3 data-i18n="AI 会记住这些">AI 会记住这些</h3>
+            <p data-i18n="你的偏好会随对话沉淀为长期记忆，跨行程复用。">你的偏好会随对话沉淀为长期记忆，跨行程复用。</p>
             <div class="ctx-tags">
-              <span>预算偏好</span><span>饮食口味</span><span>出行节奏</span><span>住宿要求</span>
+              <span data-i18n="预算偏好">预算偏好</span><span data-i18n="饮食口味">饮食口味</span><span data-i18n="出行节奏">出行节奏</span><span data-i18n="住宿要求">住宿要求</span>
             </div>
           </div>
           <div class="ctx-card" id="ctxMemory" style="display:none;">
             <div class="ctx-icon">🧠</div>
-            <h3>已提取的约束</h3>
+            <h3 data-i18n="已提取的约束">已提取的约束</h3>
             <div id="ctxMemoryList"></div>
           </div>
         </div>
@@ -98,42 +103,42 @@
     <!-- ========== View: Compare ========== -->
     <section class="view" id="view-compare">
       <div class="page-header">
-        <h2>⚖️ 方案对比决策</h2>
-        <p>输入两个目的地，由<strong>AI 助手</strong>实时对比分析（真实数据）</p>
+        <h2 data-i18n="⚖️ 方案对比决策">⚖️ 方案对比决策</h2>
+        <p data-i18n="输入两个目的地，由<strong>AI 助手</strong>实时对比分析（真实数据）">输入两个目的地，由<strong>AI 助手</strong>实时对比分析（真实数据）</p>
       </div>
 
       <div class="compare-inputs">
-        <input type="text" id="cmpA" placeholder="目的地 A，如 罗马" value="罗马" />
+        <input type="text" id="cmpA" data-i18n-ph="目的地 A，如 罗马" placeholder="目的地 A，如 罗马" value="罗马" />
         <span class="cmp-vs">VS</span>
-        <input type="text" id="cmpB" placeholder="目的地 B，如 米兰" value="米兰" />
-        <button class="btn primary" id="cmpBtn">开始对比</button>
+        <input type="text" id="cmpB" data-i18n-ph="目的地 B，如 米兰" placeholder="目的地 B，如 米兰" value="米兰" />
+        <button class="btn primary" id="cmpBtn" data-i18n="开始对比">开始对比</button>
       </div>
 
       <div class="compare-focus-wrap">
-        <span class="focus-label">你的侧重点（影响对比侧重）：</span>
+        <span class="focus-label" data-i18n="你的侧重点（影响对比侧重）：">你的侧重点（影响对比侧重）：</span>
         <div class="focus-chips" id="cmpFocus"></div>
       </div>
 
       <div class="compare-grid">
         <div class="compare-col col-a">
-          <h3 class="cmp-title" id="cmpATitle">目的地 A</h3>
-          <div class="cmp-answer" id="cmpAnswerA"><p class="muted">输入后点击「开始对比」</p></div>
+          <h3 class="cmp-title" id="cmpATitle" data-i18n="目的地 A">目的地 A</h3>
+          <div class="cmp-answer" id="cmpAnswerA"><p class="muted" data-i18n="输入后点击「开始对比」">输入后点击「开始对比」</p></div>
         </div>
         <div class="compare-vs-pillar" aria-label="对比"><span>VS</span></div>
         <div class="compare-col col-b">
-          <h3 class="cmp-title" id="cmpBTitle">目的地 B</h3>
-          <div class="cmp-answer" id="cmpAnswerB"><p class="muted">输入后点击「开始对比」</p></div>
+          <h3 class="cmp-title" id="cmpBTitle" data-i18n="目的地 B">目的地 B</h3>
+          <div class="cmp-answer" id="cmpAnswerB"><p class="muted" data-i18n="输入后点击「开始对比」">输入后点击「开始对比」</p></div>
         </div>
       </div>
 
       <div class="compare-summary" id="cmpSummary"></div>
 
       <div class="evidence-box">
-        <h4>📋 数据说明</h4>
+        <h4 data-i18n="📋 数据说明">📋 数据说明</h4>
         <div class="ev-grid">
-          <div class="ev-item"><span>✈️</span> 对比内容由<strong>AI 助手</strong>实时生成，覆盖预算 / 美食 / 风光 / 体验 / 适合人群等</div>
-          <div class="ev-item"><span>🔄</span> 每次点击「开始对比」都会重新向AI 助手发起真实查询</div>
-          <div class="ev-item"><span>🎯</span> 上方「侧重点」会注入到查询中，引导问道更关注你关心的维度</div>
+          <div class="ev-item"><span>✈️</span> <span data-i18n="对比内容由<strong>AI 助手</strong>实时生成，覆盖预算 / 美食 / 风光 / 体验 / 适合人群等">对比内容由<strong>AI 助手</strong>实时生成，覆盖预算 / 美食 / 风光 / 体验 / 适合人群等</span></div>
+          <div class="ev-item"><span>🔄</span> <span data-i18n="每次点击「开始对比」都会重新向AI 助手发起真实查询">每次点击「开始对比」都会重新向AI 助手发起真实查询</span></div>
+          <div class="ev-item"><span>🎯</span> <span data-i18n="上方「侧重点」会注入到查询中，引导问道更关注你关心的维度">上方「侧重点」会注入到查询中，引导问道更关注你关心的维度</span></div>
         </div>
       </div>
     </section>
@@ -141,127 +146,127 @@
     <!-- ========== View: Monitor ========== -->
     <section class="view" id="view-monitor">
       <div class="page-header">
-        <h2>🛡️ 行程实时守护</h2>
-        <p>天气 API 每15分钟轮询 · 航班状态实时跟踪 · 突发状况自动感知</p>
+        <h2 data-i18n="🛡️ 行程实时守护">🛡️ 行程实时守护</h2>
+        <p data-i18n="天气 API 每15分钟轮询 · 航班状态实时跟踪 · 突发状况自动感知">天气 API 每15分钟轮询 · 航班状态实时跟踪 · 突发状况自动感知</p>
       </div>
 
       <!-- 实时查询（真实AI 助手） -->
       <div class="live-query">
-        <input type="text" id="monQuery" placeholder="实时查询：如「罗马到米兰 7月25日 列车」或「罗马 天气」或「罗马 暴雨 预警」" />
-        <button class="btn primary" id="monQueryBtn">查询</button>
+        <input type="text" id="monQuery" data-i18n-ph="实时查询：如「罗马到米兰 7月25日 列车」或「罗马 天气」或「罗马 暴雨 预警」" placeholder="实时查询：如「罗马到米兰 7月25日 列车」或「罗马 天气」或「罗马 暴雨 预警」" />
+        <button class="btn primary" id="monQueryBtn" data-i18n="查询">查询</button>
       </div>
-      <div class="live-result" id="monitorResult"><p class="muted">输入上述问题，由AI 助手返回真实航班 / 天气 / 突发信息</p></div>
-      <p class="demo-tag">以下时间线、Plan B 与编排链为<strong>产品演示</strong>示意，非真实监控数据。</p>
+      <div class="live-result" id="monitorResult"><p class="muted" data-i18n="输入上述问题，由AI 助手返回真实航班 / 天气 / 突发信息">输入上述问题，由AI 助手返回真实航班 / 天气 / 突发信息</p></div>
+      <p class="demo-tag" data-i18n="以下时间线、Plan B 与编排链为<strong>产品演示</strong>示意，非真实监控数据。">以下时间线、Plan B 与编排链为<strong>产品演示</strong>示意，非真实监控数据。</p>
 
       <!-- Monitoring cards -->
       <div class="monitor-cards">
         <div class="mon-card ok">
           <span class="mon-card-icon">🌤️</span>
-          <div><strong>天气监控</strong><em>OpenWeatherMap · 每15分钟</em></div>
-          <span class="mon-badge green">正常</span>
+          <div><strong data-i18n="天气监控">天气监控</strong><em data-i18n="OpenWeatherMap · 每15分钟">OpenWeatherMap · 每15分钟</em></div>
+          <span class="mon-badge green" data-i18n="正常">正常</span>
         </div>
         <div class="mon-card warn">
           <span class="mon-card-icon">✈️</span>
-          <div><strong>航班状态</strong><em>FlightAware · 每30分钟</em></div>
-          <span class="mon-badge yellow">1个预警</span>
+          <div><strong data-i18n="航班状态">航班状态</strong><em data-i18n="FlightAware · 每30分钟">FlightAware · 每30分钟</em></div>
+          <span class="mon-badge yellow" data-i18n="1个预警">1个预警</span>
         </div>
         <div class="mon-card ok">
           <span class="mon-card-icon">🏛️</span>
-          <div><strong>景点/课程</strong><em>官方公告 + 社交媒体</em></div>
-          <span class="mon-badge green">正常</span>
+          <div><strong data-i18n="景点/课程">景点/课程</strong><em data-i18n="官方公告 + 社交媒体">官方公告 + 社交媒体</em></div>
+          <span class="mon-badge green" data-i18n="正常">正常</span>
         </div>
       </div>
 
       <div class="monitor-grid">
         <!-- Timeline（由 app.js renderMonitorTrip 动态渲染，跟随 chat 行程）-->
         <div class="timeline-card" id="timelineCard">
-          <h3>📍 行程时间线 — 意大利 15 天文化艺术游学</h3>
-          <div class="tl-item done"><div class="tl-dot"></div><div class="tl-info"><span class="tl-day">Day 1</span><p>抵达罗马，酒店已确认</p></div><span class="tl-tag ok">✅</span></div>
-          <div class="tl-item done"><div class="tl-dot"></div><div class="tl-info"><span class="tl-day">Day 2-3</span><p>罗马文化探索，斗兽场、梵蒂冈博物馆</p></div><span class="tl-tag ok">✅</span></div>
-          <div class="tl-item done"><div class="tl-dot"></div><div class="tl-info"><span class="tl-day">Day 4-5</span><p>佛罗伦萨，乌菲兹美术馆 + 手工皮具课</p></div><span class="tl-tag ok">✅</span></div>
-          <div class="tl-item alert"><div class="tl-dot pulse"></div><div class="tl-info"><span class="tl-day">Day 6 ⚡</span><p>暴雨橙色预警，户外课程受阻</p></div><span class="tl-tag warn">⚠️</span></div>
-          <div class="tl-item"><div class="tl-dot"></div><div class="tl-info"><span class="tl-day">Day 7-9</span><p>米兰，大教堂 + 设计博物馆 + 意式烹饪课</p></div><span class="tl-tag pending">⏳</span></div>
-          <div class="tl-item"><div class="tl-dot"></div><div class="tl-info"><span class="tl-day">Day 10-15</span><p>威尼斯 + 运河游船 + 玻璃工艺 + 返程</p></div><span class="tl-tag pending">⏳</span></div>
+          <h3 data-i18n="📍 行程时间线 — 意大利 15 天文化艺术游学">📍 行程时间线 — 意大利 15 天文化艺术游学</h3>
+          <div class="tl-item done"><div class="tl-dot"></div><div class="tl-info"><span class="tl-day">Day 1</span><p data-i18n="抵达罗马，酒店已确认">抵达罗马，酒店已确认</p></div><span class="tl-tag ok">✅</span></div>
+          <div class="tl-item done"><div class="tl-dot"></div><div class="tl-info"><span class="tl-day">Day 2-3</span><p data-i18n="罗马文化探索，斗兽场、梵蒂冈博物馆">罗马文化探索，斗兽场、梵蒂冈博物馆</p></div><span class="tl-tag ok">✅</span></div>
+          <div class="tl-item done"><div class="tl-dot"></div><div class="tl-info"><span class="tl-day">Day 4-5</span><p data-i18n="佛罗伦萨，乌菲兹美术馆 + 手工皮具课">佛罗伦萨，乌菲兹美术馆 + 手工皮具课</p></div><span class="tl-tag ok">✅</span></div>
+          <div class="tl-item alert"><div class="tl-dot pulse"></div><div class="tl-info"><span class="tl-day">Day 6 ⚡</span><p data-i18n="暴雨橙色预警，户外课程受阻">暴雨橙色预警，户外课程受阻</p></div><span class="tl-tag warn">⚠️</span></div>
+          <div class="tl-item"><div class="tl-dot"></div><div class="tl-info"><span class="tl-day">Day 7-9</span><p data-i18n="米兰，大教堂 + 设计博物馆 + 意式烹饪课">米兰，大教堂 + 设计博物馆 + 意式烹饪课</p></div><span class="tl-tag pending">⏳</span></div>
+          <div class="tl-item"><div class="tl-dot"></div><div class="tl-info"><span class="tl-day">Day 10-15</span><p data-i18n="威尼斯 + 运河游船 + 玻璃工艺 + 返程">威尼斯 + 运河游船 + 玻璃工艺 + 返程</p></div><span class="tl-tag pending">⏳</span></div>
         </div>
 
         <!-- Incident panel（由 app.js renderMonitorIncident 动态渲染，跟随 chat 行程）-->
         <div class="incident-card">
-          <div id="incidentEmptyHint" class="tl-empty-hint" style="display:none;">💡 在「AI 对话」中规划好行程（如「去意大利玩15天」）后，这里会根据你的目的地和天数，模拟突发状况并生成专属 Plan B 备选方案。以下为示例数据。</div>
+          <div id="incidentEmptyHint" class="tl-empty-hint" style="display:none;" data-i18n="💡 在「AI 对话」中规划好行程（如「去意大利玩15天」）后，这里会根据你的目的地和天数，模拟突发状况并生成专属 Plan B 备选方案。以下为示例数据。">💡 在「AI 对话」中规划好行程（如「去意大利玩15天」）后，这里会根据你的目的地和天数，模拟突发状况并生成专属 Plan B 备选方案。以下为示例数据。</div>
           <div id="incidentBody">
           <div class="detect-tag">
-            <span class="badge auto">🤖 系统自动检测</span>
-            <span class="detect-meta">OpenWeatherMap API · 2026-07-15 14:32 · 置信度 96%</span>
+            <span class="badge auto" data-i18n="🤖 系统自动检测">🤖 系统自动检测</span>
+            <span class="detect-meta" data-i18n="OpenWeatherMap API · 2026-07-15 14:32 · 置信度 96%">OpenWeatherMap API · 2026-07-15 14:32 · 置信度 96%</span>
           </div>
 
           <div class="alert-box">
             <div class="alert-icon">🚨</div>
             <div>
-              <h3>Day 6 — 暴雨橙色预警</h3>
-              <p>预计持续8小时。户外写生课程 + 托斯卡纳乡间路段受影响。</p>
+              <h3 data-i18n="Day 6 — 暴雨橙色预警">Day 6 — 暴雨橙色预警</h3>
+              <p data-i18n="预计持续8小时。户外写生课程 + 托斯卡纳乡间路段受影响。">预计持续8小时。户外写生课程 + 托斯卡纳乡间路段受影响。</p>
             </div>
           </div>
 
-          <h4 style="margin:20px 0 12px;font-size:15px;">🤖 AI 推荐 Plan B（综合你的约束）</h4>
+          <h4 style="margin:20px 0 12px;font-size:15px;" data-i18n="🤖 AI 推荐 Plan B（综合你的约束）">🤖 AI 推荐 Plan B（综合你的约束）</h4>
 
           <div class="plan-card selected">
             <div class="plan-head">
-              <strong>⭐ Plan B1 — 室内备选方案</strong>
-              <span class="plan-tag rec">推荐</span>
+              <strong data-i18n="⭐ Plan B1 — 室内备选方案">⭐ Plan B1 — 室内备选方案</strong>
+              <span class="plan-tag rec" data-i18n="推荐">推荐</span>
             </div>
-            <p>佛罗伦萨乌菲兹室内导览 + 手工皮具工坊，课程平移。乡间骑行推迟至 Day 8。</p>
+            <p data-i18n="佛罗伦萨乌菲兹室内导览 + 手工皮具工坊，课程平移。乡间骑行推迟至 Day 8。">佛罗伦萨乌菲兹室内导览 + 手工皮具工坊，课程平移。乡间骑行推迟至 Day 8。</p>
             <div class="plan-meta">
-              <span>💰 无额外费用</span><span>📚 学习目标不变</span><span>⏰ 仅调整顺序</span>
+              <span data-i18n="💰 无额外费用">💰 无额外费用</span><span data-i18n="📚 学习目标不变">📚 学习目标不变</span><span data-i18n="⏰ 仅调整顺序">⏰ 仅调整顺序</span>
             </div>
           </div>
 
           <div class="plan-card">
             <div class="plan-head">
-              <strong>Plan B2 — 提前转移米兰</strong>
-              <span class="plan-tag alt">备选</span>
+              <strong data-i18n="Plan B2 — 提前转移米兰">Plan B2 — 提前转移米兰</strong>
+              <span class="plan-tag alt" data-i18n="备选">备选</span>
             </div>
-            <p>提前1天去米兰。佛罗伦萨退1晚，米兰加1晚。Day 7课程顺延。</p>
+            <p data-i18n="提前1天去米兰。佛罗伦萨退1晚，米兰加1晚。Day 7课程顺延。">提前1天去米兰。佛罗伦萨退1晚，米兰加1晚。Day 7课程顺延。</p>
             <div class="plan-meta">
-              <span>💰 额外 ~320元</span><span>🚌 需改签大巴</span><span>🏨 酒店退改</span>
+              <span data-i18n="💰 额外 ~320元">💰 额外 ~320元</span><span data-i18n="🚌 需改签大巴">🚌 需改签大巴</span><span data-i18n="🏨 酒店退改">🏨 酒店退改</span>
             </div>
           </div>
 
           <!-- Orchestration chain -->
           <div class="orch-box">
-            <h4>⚙️ 点击确认后，Agent 自动编排 MCP 调用链</h4>
+            <h4 data-i18n="⚙️ 点击确认后，Agent 自动编排 MCP 调用链">⚙️ 点击确认后，Agent 自动编排 MCP 调用链</h4>
             <div class="orch-chain" id="orchChain">
               <div class="och-step" data-step="1">
                 <div class="och-num">1</div>
-                <div class="och-body"><strong>取消户外课程场地</strong><span>预订MCP: cancel_booking · ¥0</span></div>
-                <span class="och-status pending">等待</span>
+                <div class="och-body"><strong data-i18n="取消户外课程场地">取消户外课程场地</strong><span data-i18n="预订MCP: cancel_booking · ¥0">预订MCP: cancel_booking · ¥0</span></div>
+                <span class="och-status pending" data-i18n="等待">等待</span>
               </div>
-              <div class="och-join"><span>并行</span></div>
+              <div class="och-join"><span data-i18n="并行">并行</span></div>
               <div class="och-step" data-step="2">
                 <div class="och-num">2</div>
-                <div class="och-body"><strong>预订佛罗伦萨乌菲兹美术馆</strong><span>预订MCP: create_booking · ¥0</span></div>
-                <span class="och-status pending">等待</span>
+                <div class="och-body"><strong data-i18n="预订佛罗伦萨乌菲兹美术馆">预订佛罗伦萨乌菲兹美术馆</strong><span data-i18n="预订MCP: create_booking · ¥0">预订MCP: create_booking · ¥0</span></div>
+                <span class="och-status pending" data-i18n="等待">等待</span>
               </div>
-              <div class="och-join"><span>并行</span></div>
+              <div class="och-join"><span data-i18n="并行">并行</span></div>
               <div class="och-step" data-step="3">
                 <div class="och-num">3</div>
-                <div class="och-body"><strong>确认扎染工坊场地</strong><span>预定MCP: book_local · ¥0</span></div>
-                <span class="och-status pending">等待</span>
+                <div class="och-body"><strong data-i18n="确认扎染工坊场地">确认扎染工坊场地</strong><span data-i18n="预定MCP: book_local · ¥0">预定MCP: book_local · ¥0</span></div>
+                <span class="och-status pending" data-i18n="等待">等待</span>
               </div>
-              <div class="och-join"><span>依赖</span></div>
+              <div class="och-join"><span data-i18n="依赖">依赖</span></div>
               <div class="och-step" data-step="4">
                 <div class="och-num">4</div>
-                <div class="och-body"><strong>通知学员 + 更新行程</strong><span>通知MCP: send_wechat · ¥0</span></div>
-                <span class="och-status pending">等待</span>
+                <div class="och-body"><strong data-i18n="通知学员 + 更新行程">通知学员 + 更新行程</strong><span data-i18n="通知MCP: send_wechat · ¥0">通知MCP: send_wechat · ¥0</span></div>
+                <span class="och-status pending" data-i18n="等待">等待</span>
               </div>
             </div>
             <div class="orch-summary">
-              <span>总费用 ¥0</span><span>预计 ≈12秒</span><span>需授权：是</span>
+              <span data-i18n="总费用 ¥0">总费用 ¥0</span><span data-i18n="预计 ≈12秒">预计 ≈12秒</span><span data-i18n="需授权：是">需授权：是</span>
             </div>
           </div>
 
-          <button class="btn primary full" id="execBtn" onclick="executePlanB()">
+          <button class="btn primary full" id="execBtn" data-i18n="✅ 确认执行 Plan B1 — 授权 Agent 自动编排以上 4 步">
             ✅ 确认执行 Plan B1 — 授权 Agent 自动编排以上 4 步
           </button>
-          <p class="safe-note" id="execNote">🔐 以上为非支付类操作。涉及退款/扣款将单独请求授权。</p>
+          <p class="safe-note" id="execNote" data-i18n="🔐 以上为非支付类操作。涉及退款/扣款将单独请求授权。">🔐 以上为非支付类操作。涉及退款/扣款将单独请求授权。</p>
           </div><!-- /incidentBody -->
         </div>
       </div>
@@ -270,199 +275,199 @@
     <!-- ========== View: Memory ========== -->
     <section class="view" id="view-memory">
       <div class="page-header">
-        <h2>🧠 AI 记忆中心</h2>
-        <p>你的偏好会随着对话逐渐沉淀，成为 AI 理解你的基础</p>
+        <h2 data-i18n="🧠 AI 记忆中心">🧠 AI 记忆中心</h2>
+        <p data-i18n="你的偏好会随着对话逐渐沉淀，成为 AI 理解你的基础">你的偏好会随着对话逐渐沉淀，成为 AI 理解你的基础</p>
       </div>
 
       <div class="mem-grid">
         <div class="mem-panel">
-          <h3>📌 长期记忆（跨行程复用）</h3>
+          <h3 data-i18n="📌 长期记忆（跨行程复用）">📌 长期记忆（跨行程复用）</h3>
           <div class="mem-add">
             <select id="memKey" aria-label="记忆标签">
               <option value="">选择标签…</option>
             </select>
-            <input type="text" id="memVal" placeholder="值，如 清淡少辣" />
-            <button class="btn" id="memAddBtn">添加</button>
+            <input type="text" id="memVal" data-i18n-ph="值，如 清淡少辣" placeholder="值，如 清淡少辣" />
+            <button class="btn" id="memAddBtn" data-i18n="添加">添加</button>
           </div>
           <div class="mem-list" id="memLongTerm"></div>
-          <p class="muted mem-hint">记忆保存在本机浏览器（localStorage），刷新不丢失；聊天中识别到的偏好也会自动归入此处。</p>
+          <p class="muted mem-hint" data-i18n="记忆保存在本机浏览器（localStorage），刷新不丢失；聊天中识别到的偏好也会自动归入此处。">记忆保存在本机浏览器（localStorage），刷新不丢失；聊天中识别到的偏好也会自动归入此处。</p>
         </div>
 
         <div class="mem-panel">
-          <h3>📋 当前行程记忆</h3>
-          <div class="mem-row"><span class="mem-emoji">🎯</span><div><strong>行程目标</strong><em id="tripGoal">尚未规划</em></div></div>
-          <div class="mem-row"><span class="mem-emoji">💶</span><div><strong>总预算</strong><em id="tripBudget">未设置</em></div></div>
-          <div class="mem-row"><span class="mem-emoji">🏙️</span><div><strong>目标城市</strong><em id="tripCities">—</em></div></div>
-          <div class="mem-row"><span class="mem-emoji">📝</span><div><strong>特别要求</strong><em id="tripNotes">暂无</em></div></div>
-          <p class="muted mem-hint" id="tripMeta">在「AI 对话」中说出目的地和天数即可自动生成</p>
+          <h3 data-i18n="📋 当前行程记忆">📋 当前行程记忆</h3>
+          <div class="mem-row"><span class="mem-emoji">🎯</span><div><strong data-i18n="行程目标">行程目标</strong><em id="tripGoal" data-i18n="尚未规划">尚未规划</em></div></div>
+          <div class="mem-row"><span class="mem-emoji">💶</span><div><strong data-i18n="总预算">总预算</strong><em id="tripBudget" data-i18n="未设置">未设置</em></div></div>
+          <div class="mem-row"><span class="mem-emoji">🏙️</span><div><strong data-i18n="目标城市">目标城市</strong><em id="tripCities" data-i18n="—">—</em></div></div>
+          <div class="mem-row"><span class="mem-emoji">📝</span><div><strong data-i18n="特别要求">特别要求</strong><em id="tripNotes" data-i18n="暂无">暂无</em></div></div>
+          <p class="muted mem-hint" id="tripMeta" data-i18n="在「AI 对话」中说出目的地和天数即可自动生成">在「AI 对话」中说出目的地和天数即可自动生成</p>
         </div>
       </div>
 
       <div class="gov-box">
-        <h3>🔐 记忆治理规则</h3>
+        <h3 data-i18n="🔐 记忆治理规则">🔐 记忆治理规则</h3>
         <div class="gov-grid">
-          <div class="gov-item"><strong>透明</strong><p>推荐时标注"基于你的XX偏好"</p></div>
-          <div class="gov-item"><strong>可控</strong><p>可编辑、锁定、删除任意记忆</p></div>
-          <div class="gov-item"><strong>隐私</strong><p>敏感数据不入长期记忆</p></div>
-          <div class="gov-item"><strong>时效</strong><p>6个月未用自动标记"待确认"</p></div>
+          <div class="gov-item"><strong data-i18n="透明">透明</strong><p data-i18n="推荐时标注&quot;基于你的XX偏好&quot;">推荐时标注"基于你的XX偏好"</p></div>
+          <div class="gov-item"><strong data-i18n="可控">可控</strong><p data-i18n="可编辑、锁定、删除任意记忆">可编辑、锁定、删除任意记忆</p></div>
+          <div class="gov-item"><strong data-i18n="隐私">隐私</strong><p data-i18n="敏感数据不入长期记忆">敏感数据不入长期记忆</p></div>
+          <div class="gov-item"><strong data-i18n="时效">时效</strong><p data-i18n="6个月未用自动标记&quot;待确认&quot;">6个月未用自动标记"待确认"</p></div>
         </div>
       </div>
 
       <div class="kb-box">
-        <h3>📚 平台知识库（本地 RAG）</h3>
-        <div class="kb-stat" id="kbStat">加载中…</div>
+        <h3 data-i18n="📚 平台知识库（本地 RAG）">📚 平台知识库（本地 RAG）</h3>
+        <div class="kb-stat" id="kbStat" data-i18n="加载中…">加载中…</div>
         <div class="kb-actions">
-          <button class="btn" id="kbReingestBtn">🔄 重新录入知识库</button>
+          <button class="btn" id="kbReingestBtn" data-i18n="🔄 重新录入知识库">🔄 重新录入知识库</button>
         </div>
-        <p class="muted mem-hint" id="kbHint">知识库优先由 Haystack 密集向量（语义）引擎检索，Python 服务离线时自动回退本地 TF-IDF；已录入你的「旅行平台基础QA」，对话时会自动检索并作为官方口径注入 AI。</p>
+        <p class="muted mem-hint" id="kbHint" data-i18n="知识库优先由 Haystack 密集向量（语义）引擎检索，Python 服务离线时自动回退本地 TF-IDF；已录入你的「旅行平台基础QA」，对话时会自动检索并作为官方口径注入 AI。">知识库优先由 Haystack 密集向量（语义）引擎检索，Python 服务离线时自动回退本地 TF-IDF；已录入你的「旅行平台基础QA」，对话时会自动检索并作为官方口径注入 AI。</p>
       </div>
     </section>
 
     <!-- ========== View: PRD ========== -->
     <section class="view" id="view-prd">
       <div class="page-header">
-        <h2>📄 核心功能 PRD</h2>
-        <p>产品定位 · 竞品分析 · 用户场景 · AI 逻辑 · 功能清单 · 设计阐述</p>
+        <h2 data-i18n="📄 核心功能 PRD">📄 核心功能 PRD</h2>
+        <p data-i18n="产品定位 · 竞品分析 · 用户场景 · AI 逻辑 · 功能清单 · 设计阐述">产品定位 · 竞品分析 · 用户场景 · AI 逻辑 · 功能清单 · 设计阐述</p>
       </div>
 
       <div class="prd-content">
         <div class="prd-block">
-          <h3>1. 产品定位</h3>
-          <p>「CSTS TravelChat」是基于 LLM 的<strong>全流程 AI 差旅助手</strong>。CUI 对话 + GUI 卡片混合交互，覆盖"灵感激发 → 规划决策 → 行程守护"完整链路。</p>
-          <p>市面上现有平台多为<strong>"单点能力"</strong>：OTA AI 负责问答推荐、企业差旅负责预订报销、TripIt/Wanderlog 负责行程管理、航司系统负责异常恢复。<strong>我们的差异化是把这些能力整合成一个可解释、可确认、可执行的 Agent 工作台。</strong></p>
+          <h3 data-i18n="1. 产品定位">1. 产品定位</h3>
+          <p data-i18n="「CSTS TravelChat」是基于 LLM 的<strong>全流程 AI 差旅助手</strong>。CUI 对话 + GUI 卡片混合交互，覆盖&quot;灵感激发 → 规划决策 → 行程守护&quot;完整链路。">「CSTS TravelChat」是基于 LLM 的<strong>全流程 AI 差旅助手</strong>。CUI 对话 + GUI 卡片混合交互，覆盖"灵感激发 → 规划决策 → 行程守护"完整链路。</p>
+          <p data-i18n="市面上现有平台多为<strong>&quot;单点能力&quot;</strong>：OTA AI 负责问答推荐、企业差旅负责预订报销、TripIt/Wanderlog 负责行程管理、航司系统负责异常恢复。<strong>我们的差异化是把这些能力整合成一个可解释、可确认、可执行的 Agent 工作台。</strong>">市面上现有平台多为<strong>"单点能力"</strong>：OTA AI 负责问答推荐、企业差旅负责预订报销、TripIt/Wanderlog 负责行程管理、航司系统负责异常恢复。<strong>我们的差异化是把这些能力整合成一个可解释、可确认、可执行的 Agent 工作台。</strong></p>
         </div>
 
         <div class="prd-block">
-          <h3>2. 竞品格局（四类参考）</h3>
-          <p style="color:var(--ink2);font-size:13px;margin-bottom:16px;">严格说，市面上"完整覆盖灵感、决策、记忆、工具执行、突发 Plan B"的平台还不多，但每一块能力都有成熟参考对象。</p>
+          <h3 data-i18n="2. 竞品格局（四类参考）">2. 竞品格局（四类参考）</h3>
+          <p data-i18n="严格说，市面上&quot;完整覆盖灵感、决策、记忆、工具执行、突发 Plan B&quot;的平台还不多，但每一块能力都有成熟参考对象。" style="color:var(--ink2);font-size:13px;margin-bottom:16px;">严格说，市面上"完整覆盖灵感、决策、记忆、工具执行、突发 Plan B"的平台还不多，但每一块能力都有成熟参考对象。</p>
 
           <table class="prd-table">
-            <thead><tr><th>类别</th><th>平台</th><th>核心能力</th><th>对我们的启发</th></tr></thead>
+            <thead><tr><th data-i18n="类别">类别</th><th data-i18n="平台">平台</th><th data-i18n="核心能力">核心能力</th><th data-i18n="对我们的启发">对我们的启发</th></tr></thead>
             <tbody>
               <tr>
-                <td rowspan="6" style="font-weight:700;color:var(--blue);">🔍<br/>直接竞品</td>
-                <td>携程「问道」</td><td>OTA 内 LLM 助手，探索式问题、景点查询</td><td>AI 不是替代搜索，而是补充复杂探索</td>
+                <td rowspan="6" style="font-weight:700;color:var(--blue);">🔍<br/><span data-i18n="直接竞品">直接竞品</span></td>
+                <td>携程「问道」</td><td data-i18n="OTA 内 LLM 助手，探索式问题、景点查询">OTA 内 LLM 助手，探索式问题、景点查询</td><td data-i18n="AI 不是替代搜索，而是补充复杂探索">AI 不是替代搜索，而是补充复杂探索</td>
               </tr>
-              <tr><td>Trip.com TripGen</td><td>OTA 内置 chatbot，目的地/行程/预订前咨询</td><td>参考"AI+交易平台"入口形态</td></tr>
-              <tr><td>GuideGeek</td><td>WhatsApp/Instagram 旅行助手，人工审核防幻觉</td><td>CUI 轻入口、白标给 DMO、人工纠偏</td></tr>
-              <tr><td>Google AI Travel Canvas</td><td>搜索+地图+评价+酒店/机票 → 动态 itinerary</td><td>对话+可视化画布+后续预订伙伴</td></tr>
-              <tr><td>MakeMyTrip AI</td><td>多语言，灵感规划到旅中/旅后服务</td><td>"全旅程助手"叙事</td></tr>
-              <tr><td>ixigo AI-native app</td><td>语音交互，从发现到预订的 agentic features</td><td>移动端语音入口+自然语言预订</td></tr>
+              <tr><td>Trip.com TripGen</td><td data-i18n="OTA 内置 chatbot，目的地/行程/预订前咨询">OTA 内置 chatbot，目的地/行程/预订前咨询</td><td data-i18n="参考&quot;AI+交易平台&quot;入口形态">参考"AI+交易平台"入口形态</td></tr>
+              <tr><td>GuideGeek</td><td data-i18n="WhatsApp/Instagram 旅行助手，人工审核防幻觉">WhatsApp/Instagram 旅行助手，人工审核防幻觉</td><td data-i18n="CUI 轻入口、白标给 DMO、人工纠偏">CUI 轻入口、白标给 DMO、人工纠偏</td></tr>
+              <tr><td>Google AI Travel Canvas</td><td data-i18n="搜索+地图+评价+酒店/机票 → 动态 itinerary">搜索+地图+评价+酒店/机票 → 动态 itinerary</td><td data-i18n="对话+可视化画布+后续预订伙伴">对话+可视化画布+后续预订伙伴</td></tr>
+              <tr><td>MakeMyTrip AI</td><td data-i18n="多语言，灵感规划到旅中/旅后服务">多语言，灵感规划到旅中/旅后服务</td><td data-i18n="&quot;全旅程助手&quot;叙事">&quot;全旅程助手&quot;叙事</td></tr>
+              <tr><td>ixigo AI-native app</td><td data-i18n="语音交互，从发现到预订的 agentic features">语音交互，从发现到预订的 agentic features</td><td data-i18n="移动端语音入口+自然语言预订">移动端语音入口+自然语言预订</td></tr>
               <tr>
-                <td rowspan="4" style="font-weight:700;color:var(--green);">💼<br/>企业差旅</td>
-                <td>Navan</td><td>Travel+Expense+Payment 一体化 AI-first 平台</td><td>企业版商业化参考</td>
+                <td rowspan="4" style="font-weight:700;color:var(--green);">💼<br/><span data-i18n="企业差旅">企业差旅</span></td>
+                <td>Navan</td><td data-i18n="Travel+Expense+Payment 一体化 AI-first 平台">Travel+Expense+Payment 一体化 AI-first 平台</td><td data-i18n="企业版商业化参考">企业版商业化参考</td>
               </tr>
-              <tr><td>TravelPerk</td><td>AI bot Juno，自动化预订和报销</td><td>旅行+支出管理一体化</td></tr>
-              <tr><td>Amex GBT</td><td>大企业差旅管理、异常支持、政策合规</td><td>全球服务网络+合规能力</td></tr>
-              <tr><td>SAP Concur</td><td>传统差旅报销、审批、财务合规</td><td>后台流程标杆（非前台体验）</td></tr>
+              <tr><td>TravelPerk</td><td data-i18n="AI bot Juno，自动化预订和报销">AI bot Juno，自动化预订和报销</td><td data-i18n="旅行+支出管理一体化">旅行+支出管理一体化</td></tr>
+              <tr><td>Amex GBT</td><td data-i18n="大企业差旅管理、异常支持、政策合规">大企业差旅管理、异常支持、政策合规</td><td data-i18n="全球服务网络+合规能力">全球服务网络+合规能力</td></tr>
+              <tr><td>SAP Concur</td><td data-i18n="传统差旅报销、审批、财务合规">传统差旅报销、审批、财务合规</td><td data-i18n="后台流程标杆（非前台体验）">后台流程标杆（非前台体验）</td></tr>
               <tr>
-                <td rowspan="3" style="font-weight:700;color:var(--purple);">📋<br/>行程管理</td>
-                <td>TripIt</td><td>邮件导入订单、自动生成 itinerary、航班提醒</td><td>自动化行程整理</td>
+                <td rowspan="3" style="font-weight:700;color:var(--purple);">📋<br/><span data-i18n="行程管理">行程管理</span></td>
+                <td>TripIt</td><td data-i18n="邮件导入订单、自动生成 itinerary、航班提醒">邮件导入订单、自动生成 itinerary、航班提醒</td><td data-i18n="自动化行程整理">自动化行程整理</td>
               </tr>
-              <tr><td>Wanderlog</td><td>多人协作、地图、预算、任务分配</td><td>GUI 工作台参考</td></tr>
-              <tr><td>HomeToGo AI Mode</td><td>AI 搜索、AI 筛选、评价摘要、住宿推荐</td><td>AI 筛选+摘要能力</td></tr>
+              <tr><td>Wanderlog</td><td data-i18n="多人协作、地图、预算、任务分配">多人协作、地图、预算、任务分配</td><td data-i18n="GUI 工作台参考">GUI 工作台参考</td></tr>
+              <tr><td>HomeToGo AI Mode</td><td data-i18n="AI 搜索、AI 筛选、评价摘要、住宿推荐">AI 搜索、AI 筛选、评价摘要、住宿推荐</td><td data-i18n="AI 筛选+摘要能力">AI 筛选+摘要能力</td></tr>
               <tr>
-                <td rowspan="2" style="font-weight:700;color:var(--red);">⚡<br/>异常恢复</td>
-                <td>FlightSense</td><td>实时航班延误预测+天气+对话式 AI</td><td>预测+感知+对话</td>
+                <td rowspan="2" style="font-weight:700;color:var(--red);">⚡<br/><span data-i18n="异常恢复">异常恢复</span></td>
+                <td>FlightSense</td><td data-i18n="实时航班延误预测+天气+对话式 AI">实时航班延误预测+天气+对话式 AI</td><td data-i18n="预测+感知+对话">预测+感知+对话</td>
               </tr>
-              <tr><td>AIRS disruption recovery</td><td>航司运营中的 aircraft/crew/passenger recovery</td><td>Plan B 不能只靠 LLM，需要规则+优化器+库存+人工确认</td></tr>
+              <tr><td>AIRS disruption recovery</td><td data-i18n="航司运营中的 aircraft/crew/passenger recovery">航司运营中的 aircraft/crew/passenger recovery</td><td data-i18n="Plan B 不能只靠 LLM，需要规则+优化器+库存+人工确认">Plan B 不能只靠 LLM，需要规则+优化器+库存+人工确认</td></tr>
             </tbody>
           </table>
         </div>
 
         <div class="prd-block">
-          <h3>3. 核心差异化</h3>
+          <h3 data-i18n="3. 核心差异化">3. 核心差异化</h3>
           <ul>
-            <li><strong>全链路整合</strong> — 灵感（类似 GuideGeek）→ 决策（类似 Google Travel Canvas）→ 记忆（向量数据库+治理）→ 执行（类似 Navan MCP 编排）→ 异常恢复（类似 AIRS + LLM）</li>
-            <li><strong>可解释 Agent</strong> — 每次推荐标注数据来源(souce)+查询时间(fetched_at)+置信度+不确定性声明，类似 GuideGeek 的人工审核思路但用自动化实现</li>
-            <li><strong>长记忆系统</strong> — 独立于 LLM 上下文窗口的向量记忆，跨行程复用，第45天记得第1天的偏好</li>
-            <li><strong>MCP 工具编排</strong> — 通过 MCP 协议标准化接入OTA 平台/天气/航班/知识库等外部服务，Agent 按依赖关系自动编排调用链</li>
-            <li><strong>双通道风险感知</strong> — 系统主动监控（类似 FlightSense 预测）+ 用户手动上报，确保异常不遗漏</li>
+            <li data-i18n="<strong>全链路整合</strong> — 灵感（类似 GuideGeek）→ 决策（类似 Google Travel Canvas）→ 记忆（向量数据库+治理）→ 执行（类似 Navan MCP 编排）→ 异常恢复（类似 AIRS + LLM）"><strong>全链路整合</strong> — 灵感（类似 GuideGeek）→ 决策（类似 Google Travel Canvas）→ 记忆（向量数据库+治理）→ 执行（类似 Navan MCP 编排）→ 异常恢复（类似 AIRS + LLM）</li>
+            <li data-i18n="<strong>可解释 Agent</strong> — 每次推荐标注数据来源(souce)+查询时间(fetched_at)+置信度+不确定性声明，类似 GuideGeek 的人工审核思路但用自动化实现"><strong>可解释 Agent</strong> — 每次推荐标注数据来源(souce)+查询时间(fetched_at)+置信度+不确定性声明，类似 GuideGeek 的人工审核思路但用自动化实现</li>
+            <li data-i18n="<strong>长记忆系统</strong> — 独立于 LLM 上下文窗口的向量记忆，跨行程复用，第45天记得第1天的偏好"><strong>长记忆系统</strong> — 独立于 LLM 上下文窗口的向量记忆，跨行程复用，第45天记得第1天的偏好</li>
+            <li data-i18n="<strong>MCP 工具编排</strong> — 通过 MCP 协议标准化接入OTA 平台/天气/航班/知识库等外部服务，Agent 按依赖关系自动编排调用链"><strong>MCP 工具编排</strong> — 通过 MCP 协议标准化接入OTA 平台/天气/航班/知识库等外部服务，Agent 按依赖关系自动编排调用链</li>
+            <li data-i18n="<strong>双通道风险感知</strong> — 系统主动监控（类似 FlightSense 预测）+ 用户手动上报，确保异常不遗漏"><strong>双通道风险感知</strong> — 系统主动监控（类似 FlightSense 预测）+ 用户手动上报，确保异常不遗漏</li>
           </ul>
         </div>
 
         <div class="prd-block">
-          <h3>4. 三大用户场景</h3>
-          <p><strong>A · 长线游学知识库</strong></p>
-          <p>用户正规划意大利文化艺术游学，前期收集了大量小红书攻略、签证政策、语校与美术馆资料、个人学习计划。<strong>痛点</strong>：碎片信息难以结构化；第45天时无法回忆起第1天设定的饮食偏好或预算限制。<strong>AI方案</strong>：用户粘贴碎片→自动提取实体+约束→存入向量数据库→第45天自动激活相关记忆→主动提醒"根据Day1设定，你偏好清淡饮食"。</p>
-          <p><strong>B · 复杂行程对比决策</strong></p>
-          <p>用户在"罗马"和"米兰"间纠结，不知道先去哪个城市。<strong>痛点</strong>：信息分散（天气、机票、住宿、课程评价），多维度难以量化比较。<strong>AI方案</strong>：并行调用4个MCP Server→6维评分矩阵→用户调节权重实时重算→展示每项评分的数据来源和不确定性。</p>
-          <p><strong>C · 行程突发与动态调整</strong></p>
-          <p>旅行途中突发状况（景点关门、极端天气航班取消）。<strong>痛点</strong>：手动查询备选方案耗时；调整涉及多个环节（课程/交通/住宿）。<strong>AI方案</strong>：天气MCP 15分钟轮询→自动检测异常→Skill: generate_plan_b 生成2-3个替代方案→用户确认→Skill: execute_rebook 编排MCP链一键执行。</p>
+          <h3 data-i18n="4. 三大用户场景">4. 三大用户场景</h3>
+          <p><strong data-i18n="A · 长线游学知识库">A · 长线游学知识库</strong></p>
+          <p data-i18n="用户正规划意大利文化艺术游学，前期收集了大量小红书攻略、签证政策、语校与美术馆资料、个人学习计划。<strong>痛点</strong>：碎片信息难以结构化；第45天时无法回忆起第1天设定的饮食偏好或预算限制。<strong>AI方案</strong>：用户粘贴碎片→自动提取实体+约束→存入向量数据库→第45天自动激活相关记忆→主动提醒&quot;根据Day1设定，你偏好清淡饮食&quot;。">用户正规划意大利文化艺术游学，前期收集了大量小红书攻略、签证政策、语校与美术馆资料、个人学习计划。<strong>痛点</strong>：碎片信息难以结构化；第45天时无法回忆起第1天设定的饮食偏好或预算限制。<strong>AI方案</strong>：用户粘贴碎片→自动提取实体+约束→存入向量数据库→第45天自动激活相关记忆→主动提醒"根据Day1设定，你偏好清淡饮食"。</p>
+          <p><strong data-i18n="B · 复杂行程对比决策">B · 复杂行程对比决策</strong></p>
+          <p data-i18n="用户在&quot;罗马&quot;和&quot;米兰&quot;间纠结，不知道先去哪个城市。<strong>痛点</strong>：信息分散（天气、机票、住宿、课程评价），多维度难以量化比较。<strong>AI方案</strong>：并行调用4个MCP Server→6维评分矩阵→用户调节权重实时重算→展示每项评分的数据来源和不确定性。">用户在"罗马"和"米兰"间纠结，不知道先去哪个城市。<strong>痛点</strong>：信息分散（天气、机票、住宿、课程评价），多维度难以量化比较。<strong>AI方案</strong>：并行调用4个MCP Server→6维评分矩阵→用户调节权重实时重算→展示每项评分的数据来源和不确定性。</p>
+          <p><strong data-i18n="C · 行程突发与动态调整">C · 行程突发与动态调整</strong></p>
+          <p data-i18n="旅行途中突发状况（景点关门、极端天气航班取消）。<strong>痛点</strong>：手动查询备选方案耗时；调整涉及多个环节（课程/交通/住宿）。<strong>AI方案</strong>：天气MCP 15分钟轮询→自动检测异常→Skill: generate_plan_b 生成2-3个替代方案→用户确认→Skill: execute_rebook 编排MCP链一键执行。">旅行途中突发状况（景点关门、极端天气航班取消）。<strong>痛点</strong>：手动查询备选方案耗时；调整涉及多个环节（课程/交通/住宿）。<strong>AI方案</strong>：天气MCP 15分钟轮询→自动检测异常→Skill: generate_plan_b 生成2-3个替代方案→用户确认→Skill: execute_rebook 编排MCP链一键执行。</p>
         </div>
 
         <div class="prd-block">
-          <h3>5. AI 数据流（6阶段）</h3>
+          <h3 data-i18n="5. AI 数据流（6阶段）">5. AI 数据流（6阶段）</h3>
           <div class="flow-line">
-            <span>👤 用户输入</span><span>→</span>
-            <span>🔍 意图识别+实体提取</span><span>→</span>
-            <span>🧠 记忆检索(向量DB)</span><span>→</span>
-            <span>🔧 并行MCP调用</span><span>→</span>
-            <span>📊 聚合+约束校验</span><span>→</span>
-            <span>💬 结构化输出+不确定性声明</span>
+            <span data-i18n="👤 用户输入">👤 用户输入</span><span>→</span>
+            <span data-i18n="🔍 意图识别+实体提取">🔍 意图识别+实体提取</span><span>→</span>
+            <span data-i18n="🧠 记忆检索(向量DB)">🧠 记忆检索(向量DB)</span><span>→</span>
+            <span data-i18n="🔧 并行MCP调用">🔧 并行MCP调用</span><span>→</span>
+            <span data-i18n="📊 聚合+约束校验">📊 聚合+约束校验</span><span>→</span>
+            <span data-i18n="💬 结构化输出+不确定性声明">💬 结构化输出+不确定性声明</span>
           </div>
         </div>
 
         <div class="prd-block">
-          <h3>6. 核心 Prompt 设计思路</h3>
+          <h3 data-i18n="6. 核心 Prompt 设计思路">6. 核心 Prompt 设计思路</h3>
           <table class="prd-table">
-            <thead><tr><th>阶段</th><th>输入 (Input)</th><th>要求输出 (Output)</th><th>约束条件（防幻觉）</th></tr></thead>
+            <thead><tr><th data-i18n="阶段">阶段</th><th data-i18n="输入 (Input)">输入 (Input)</th><th data-i18n="要求输出 (Output)">要求输出 (Output)</th><th data-i18n="约束条件（防幻觉）">约束条件（防幻觉）</th></tr></thead>
             <tbody>
-              <tr><td>意图识别</td><td>用户原始消息 + 上下文摘要</td><td>{intent, entities[], confidence, required_tools[]}</td><td>confidence &lt;0.7 必须追问；不得猜测具体数值</td></tr>
-              <tr><td>记忆检索</td><td>user_id + intent + entities</td><td>{memories[], similarity_score, saved_at}</td><td>仅返回 similarity &gt;0.8；标注记忆保存时间</td></tr>
-              <tr><td>工具编排</td><td>task + required_tools + 依赖关系</td><td>{tool_calls[], dependency_graph}</td><td>独立调用并行执行；有依赖的串行；标注每个 tool 的 source</td></tr>
-              <tr><td>方案生成</td><td>tool_results + user_constraints + memories</td><td>结构化方案 + evidence[] + uncertainty[]</td><td>每条数据强制携带 source + fetched_at；数值区间不可缩小</td></tr>
-              <tr><td>Plan B</td><td>disruption_event + affected_segments[]</td><td>{plans[], cost_impact, time_impact, risk}</td><td>必须≥2个方案；标注每个方案的代价和风险</td></tr>
+              <tr><td data-i18n="意图识别">意图识别</td><td data-i18n="用户原始消息 + 上下文摘要">用户原始消息 + 上下文摘要</td><td data-i18n="{intent, entities[], confidence, required_tools[]}">{intent, entities[], confidence, required_tools[]}</td><td data-i18n="confidence &lt;0.7 必须追问；不得猜测具体数值">confidence &lt;0.7 必须追问；不得猜测具体数值</td></tr>
+              <tr><td data-i18n="记忆检索">记忆检索</td><td data-i18n="user_id + intent + entities">user_id + intent + entities</td><td data-i18n="{memories[], similarity_score, saved_at}">{memories[], similarity_score, saved_at}</td><td data-i18n="仅返回 similarity &gt;0.8；标注记忆保存时间">仅返回 similarity &gt;0.8；标注记忆保存时间</td></tr>
+              <tr><td data-i18n="工具编排">工具编排</td><td data-i18n="task + required_tools + 依赖关系">task + required_tools + 依赖关系</td><td data-i18n="{tool_calls[], dependency_graph}">{tool_calls[], dependency_graph}</td><td data-i18n="独立调用并行执行；有依赖的串行；标注每个 tool 的 source">独立调用并行执行；有依赖的串行；标注每个 tool 的 source</td></tr>
+              <tr><td data-i18n="方案生成">方案生成</td><td data-i18n="tool_results + user_constraints + memories">tool_results + user_constraints + memories</td><td data-i18n="结构化方案 + evidence[] + uncertainty[]">结构化方案 + evidence[] + uncertainty[]</td><td data-i18n="每条数据强制携带 source + fetched_at；数值区间不可缩小">每条数据强制携带 source + fetched_at；数值区间不可缩小</td></tr>
+              <tr><td data-i18n="Plan B">Plan B</td><td data-i18n="disruption_event + affected_segments[]">disruption_event + affected_segments[]</td><td data-i18n="{plans[], cost_impact, time_impact, risk}">{plans[], cost_impact, time_impact, risk}</td><td data-i18n="必须≥2个方案；标注每个方案的代价和风险">必须≥2个方案；标注每个方案的代价和风险</td></tr>
             </tbody>
           </table>
         </div>
 
         <div class="prd-block">
-          <h3>7. 防幻觉机制（5道防线）</h3>
+          <h3 data-i18n="7. 防幻觉机制（5道防线）">7. 防幻觉机制（5道防线）</h3>
           <ul>
-            <li><strong>① 强制溯源</strong> — 所有数据类声明（价格、天气、时间）必须携带 source 和 fetched_at 字段，无来源=不可信</li>
-            <li><strong>② 置信度门槛</strong> — 意图识别 confidence &lt;0.7 时强制追问用户；工具调用结果标记置信度</li>
-            <li><strong>③ 数值区间保护</strong> — 工具返回的价格区间 [¥1600, ¥4200] 不可被模型缩小为"大约¥3000"</li>
-            <li><strong>④ 未知即声明</strong> — 无法获取的数据标注为"暂未获取"而非编造默认值，类似 GuideGeek 人工审核思路</li>
-            <li><strong>⑤ 人工确认卡点</strong> — 涉及支付/退款/隐私的操作，Agent 不可自动执行，必须用户逐项勾选确认</li>
+            <li data-i18n="<strong>① 强制溯源</strong> — 所有数据类声明（价格、天气、时间）必须携带 source 和 fetched_at 字段，无来源=不可信"><strong>① 强制溯源</strong> — 所有数据类声明（价格、天气、时间）必须携带 source 和 fetched_at 字段，无来源=不可信</li>
+            <li data-i18n="<strong>② 置信度门槛</strong> — 意图识别 confidence &lt;0.7 时强制追问用户；工具调用结果标记置信度"><strong>② 置信度门槛</strong> — 意图识别 confidence &lt;0.7 时强制追问用户；工具调用结果标记置信度</li>
+            <li data-i18n="<strong>③ 数值区间保护</strong> — 工具返回的价格区间 [¥1600, ¥4200] 不可被模型缩小为&quot;大约¥3000&quot;"><strong>③ 数值区间保护</strong> — 工具返回的价格区间 [¥1600, ¥4200] 不可被模型缩小为"大约¥3000"</li>
+            <li data-i18n="<strong>④ 未知即声明</strong> — 无法获取的数据标注为&quot;暂未获取&quot;而非编造默认值，类似 GuideGeek 人工审核思路"><strong>④ 未知即声明</strong> — 无法获取的数据标注为"暂未获取"而非编造默认值，类似 GuideGeek 人工审核思路</li>
+            <li data-i18n="<strong>⑤ 人工确认卡点</strong> — 涉及支付/退款/隐私的操作，Agent 不可自动执行，必须用户逐项勾选确认"><strong>⑤ 人工确认卡点</strong> — 涉及支付/退款/隐私的操作，Agent 不可自动执行，必须用户逐项勾选确认</li>
           </ul>
         </div>
 
         <div class="prd-block">
-          <h3>8. 功能清单（MVP → V2）</h3>
+          <h3 data-i18n="8. 功能清单（MVP → V2）">8. 功能清单（MVP → V2）</h3>
           <table class="prd-table">
-            <thead><tr><th>优先级</th><th>功能</th><th>MVP</th><th>V1.1</th><th>V2</th><th>参考对象</th></tr></thead>
+            <thead><tr><th data-i18n="优先级">优先级</th><th data-i18n="功能">功能</th><th data-i18n="MVP">MVP</th><th data-i18n="V1.1">V1.1</th><th data-i18n="V2">V2</th><th data-i18n="参考对象">参考对象</th></tr></thead>
             <tbody>
-              <tr><td>P0</td><td>对话式行程规划+约束提取</td><td>✅</td><td>✅</td><td>✅</td><td>GuideGeek / AI 助手</td></tr>
-              <tr><td>P0</td><td>多方案对比+权重调节</td><td>✅</td><td>✅</td><td>✅</td><td>Google Travel Canvas</td></tr>
-              <tr><td>P0</td><td>突发事件感知+Plan B</td><td>✅</td><td>✅</td><td>✅</td><td>FlightSense / AIRS</td></tr>
-              <tr><td>P1</td><td>长期/短期记忆管理</td><td>✅</td><td>✅</td><td>✅</td><td>自研向量记忆系统</td></tr>
-              <tr><td>P1</td><td>知识库上传+自动结构化</td><td></td><td>✅</td><td>✅</td><td>RAG + TripIt 自动导入</td></tr>
-              <tr><td>P1</td><td>MCP 编排退改签执行</td><td></td><td>✅</td><td>✅</td><td>Navan / TravelPerk</td></tr>
-              <tr><td>P2</td><td>多人协作行程规划</td><td></td><td></td><td>✅</td><td>Wanderlog</td></tr>
-              <tr><td>P2</td><td>语音输入+实时翻译</td><td></td><td></td><td>✅</td><td>ixigo</td></tr>
-              <tr><td>P2</td><td>企业差旅政策合规</td><td></td><td></td><td>✅</td><td>SAP Concur / Amex GBT</td></tr>
+              <tr><td>P0</td><td data-i18n="对话式行程规划+约束提取">对话式行程规划+约束提取</td><td>✅</td><td>✅</td><td>✅</td><td data-i18n="GuideGeek / AI 助手">GuideGeek / AI 助手</td></tr>
+              <tr><td>P0</td><td data-i18n="多方案对比+权重调节">多方案对比+权重调节</td><td>✅</td><td>✅</td><td>✅</td><td data-i18n="Google Travel Canvas">Google Travel Canvas</td></tr>
+              <tr><td>P0</td><td data-i18n="突发事件感知+Plan B">突发事件感知+Plan B</td><td>✅</td><td>✅</td><td>✅</td><td data-i18n="FlightSense / AIRS">FlightSense / AIRS</td></tr>
+              <tr><td>P1</td><td data-i18n="长期/短期记忆管理">长期/短期记忆管理</td><td>✅</td><td>✅</td><td>✅</td><td data-i18n="自研向量记忆系统">自研向量记忆系统</td></tr>
+              <tr><td>P1</td><td data-i18n="知识库上传+自动结构化">知识库上传+自动结构化</td><td></td><td>✅</td><td>✅</td><td data-i18n="RAG + TripIt 自动导入">RAG + TripIt 自动导入</td></tr>
+              <tr><td>P1</td><td data-i18n="MCP 编排退改签执行">MCP 编排退改签执行</td><td></td><td>✅</td><td>✅</td><td data-i18n="Navan / TravelPerk">Navan / TravelPerk</td></tr>
+              <tr><td>P2</td><td data-i18n="多人协作行程规划">多人协作行程规划</td><td></td><td></td><td>✅</td><td data-i18n="Wanderlog">Wanderlog</td></tr>
+              <tr><td>P2</td><td data-i18n="语音输入+实时翻译">语音输入+实时翻译</td><td></td><td></td><td>✅</td><td data-i18n="ixigo">ixigo</td></tr>
+              <tr><td>P2</td><td data-i18n="企业差旅政策合规">企业差旅政策合规</td><td></td><td></td><td>✅</td><td data-i18n="SAP Concur / Amex GBT">SAP Concur / Amex GBT</td></tr>
             </tbody>
           </table>
         </div>
 
         <div class="prd-block">
-          <h3>9. 设计阐述</h3>
-          <p><strong>为什么 CUI + GUI？</strong>对话（CUI）降低表达门槛——用户不需要填表单，像跟朋友聊天一样描述想法；结构化卡片（GUI——对比矩阵、时间线、编排链）补充纯文本的不足。参考 GuideGeek 的 WhatsApp 轻入口 + Google Travel Canvas 的可视化画布。</p>
-          <p><strong>LLM 能力边界（做不到什么）</strong></p>
+          <h3 data-i18n="9. 设计阐述">9. 设计阐述</h3>
+          <p><strong data-i18n="为什么 CUI + GUI？">为什么 CUI + GUI？</strong><span data-i18n="对话（CUI）降低表达门槛——用户不需要填表单，像跟朋友聊天一样描述想法；结构化卡片（GUI——对比矩阵、时间线、编排链）补充纯文本的不足。参考 GuideGeek 的 WhatsApp 轻入口 + Google Travel Canvas 的可视化画布。">对话（CUI）降低表达门槛——用户不需要填表单，像跟朋友聊天一样描述想法；结构化卡片（GUI——对比矩阵、时间线、编排链）补充纯文本的不足。参考 GuideGeek 的 WhatsApp 轻入口 + Google Travel Canvas 的可视化画布。</span></p>
+          <p><strong data-i18n="LLM 能力边界（做不到什么）">LLM 能力边界（做不到什么）</strong></p>
           <ul>
-            <li>做不到精准数值预测——机票价格/天气必须依赖外部 API，LLM 只负责推理和推荐</li>
-            <li>长对话记忆衰减——超过 100k token 后对早期信息召回准确率下降，因此独立记忆系统比依赖上下文窗口更可靠</li>
-            <li>幻觉不可避免但可治理——通过 5 道防线（溯源+置信度+区间保护+未知声明+确认卡点）将幻觉率控制在可接受范围</li>
-            <li>Plan B 不能只靠 LLM 生成文案——背后需要规则引擎+库存/订单工具+人工确认，参考 AIRS disruption recovery</li>
+            <li data-i18n="做不到精准数值预测——机票价格/天气必须依赖外部 API，LLM 只负责推理和推荐">做不到精准数值预测——机票价格/天气必须依赖外部 API，LLM 只负责推理和推荐</li>
+            <li data-i18n="长对话记忆衰减——超过 100k token 后对早期信息召回准确率下降，因此独立记忆系统比依赖上下文窗口更可靠">长对话记忆衰减——超过 100k token 后对早期信息召回准确率下降，因此独立记忆系统比依赖上下文窗口更可靠</li>
+            <li data-i18n="幻觉不可避免但可治理——通过 5 道防线（溯源+置信度+区间保护+未知声明+确认卡点）将幻觉率控制在可接受范围">幻觉不可避免但可治理——通过 5 道防线（溯源+置信度+区间保护+未知声明+确认卡点）将幻觉率控制在可接受范围</li>
+            <li data-i18n="Plan B 不能只靠 LLM 生成文案——背后需要规则引擎+库存/订单工具+人工确认，参考 AIRS disruption recovery">Plan B 不能只靠 LLM 生成文案——背后需要规则引擎+库存/订单工具+人工确认，参考 AIRS disruption recovery</li>
           </ul>
-          <p><strong>未来演进</strong></p>
+          <p><strong data-i18n="未来演进">未来演进</strong></p>
           <ul>
-            <li>Agent 自主执行：从"建议"到"执行"，用户授权后 Agent 可自主完成机票/酒店/课程预订</li>
-            <li>多模态输入：拍照提取签证文件/手写笔记/机票截图→结构化信息</li>
-            <li>社交协同：多人行程协同规划、费用分摊、偏好融合（参考 Wanderlog）</li>
-            <li>端侧部署：核心记忆和偏好本地存储，保护隐私+降低延迟</li>
-            <li>企业版：接入企业差旅政策（参考 Navan/SAP Concur），自动合规校验</li>
+            <li data-i18n="Agent 自主执行：从&quot;建议&quot;到&quot;执行&quot;，用户授权后 Agent 可自主完成机票/酒店/课程预订">Agent 自主执行：从"建议"到"执行"，用户授权后 Agent 可自主完成机票/酒店/课程预订</li>
+            <li data-i18n="多模态输入：拍照提取签证文件/手写笔记/机票截图→结构化信息">多模态输入：拍照提取签证文件/手写笔记/机票截图→结构化信息</li>
+            <li data-i18n="社交协同：多人行程协同规划、费用分摊、偏好融合（参考 Wanderlog）">社交协同：多人行程协同规划、费用分摊、偏好融合（参考 Wanderlog）</li>
+            <li data-i18n="端侧部署：核心记忆和偏好本地存储，保护隐私+降低延迟">端侧部署：核心记忆和偏好本地存储，保护隐私+降低延迟</li>
+            <li data-i18n="企业版：接入企业差旅政策（参考 Navan/SAP Concur），自动合规校验">企业版：接入企业差旅政策（参考 Navan/SAP Concur），自动合规校验</li>
           </ul>
         </div>
       </div>
